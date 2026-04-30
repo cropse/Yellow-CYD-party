@@ -190,7 +190,13 @@ MIT License - feel free to use and modify.
 
 ## Credits
 
+This project is inspired by and builds upon:
+
+- **[ESP32-CYD-ESPHome](https://github.com/makeitworktech/ESP32-CYD-ESPHome/)** by [makeitworktech](https://github.com/makeitworktech) - Original ESPHome YAML configurations for CYD devices that served as the foundation for this generator
+- **[ESP32-Cheap-Yellow-Display](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display)** by [witnessmenow](https://github.com/witnessmenow) - Hardware reference and CYD community resources
+
+Additional resources:
+
 - [ESPHome](https://esphome.io/) - ESP32 firmware framework
 - [LVGL](https://lvgl.io/) - Light and Versatile Graphics Library
-- [Material Design Icons](https://pictogrammers.com/library/mdi/) - Icon library
-- [Cheap Yellow Display](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display) - Hardware reference
+- [Material Design Icons](https://pictogrammers.com/library/mdi/) by [Pictogrammers](https://pictogrammers.com/) - Icon library

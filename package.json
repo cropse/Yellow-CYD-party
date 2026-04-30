@@ -1,0 +1,24 @@
+{
+  "name": "yellow-cyd-party",
+  "version": "1.0.0",
+  "description": "A web-based tool for generating ESPHome YAML configurations for CYD (Cheap Yellow Display - ESP32-2432S028R) devices.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node verify-cyd.cjs"
+  },
+  "keywords": [
+    "esphome",
+    "cyd",
+    "esp32",
+    "yaml-generator",
+    "home-assistant"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.4.21"
+  }
+}

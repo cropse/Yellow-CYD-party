@@ -39,7 +39,7 @@ if (parsed.buttons[3].shortPress.actionType !== 'media_player') throw new Error(
 if (parsed.buttons[3].longPress.actionType !== 'media_player') throw new Error('btn4 long media action did not import');
 if (parsed.buttons[6].shortPress.actionType !== 'cover') throw new Error('btn7 cover action did not import');
 const yaml2 = vm.runInContext('generateFullYAML(parsed)', ctx);
-for (const needle of ['btn_12', 'media_player.media_play_pause', 'cover.set_cover_position', 'timer_sync_template.yaml']) {
+for (const needle of ['btn_12', 'media_player.media_play_pause', 'cover.set_cover_position', 'timer.studio_balcony_plant_light_timer']) {
   if (!yaml2.includes(needle)) throw new Error('roundtrip loss: ' + needle);
 }
 
