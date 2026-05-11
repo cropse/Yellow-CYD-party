@@ -512,19 +512,30 @@ export function generateFullYAML(config, deps) {
   return yaml;
 }
 
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function highlightYAML(text) {
   const lines = text.split('\n');
   return lines.map(line => {
-    const commentMatch = line.match(/^(\s*)(#.*)$/);
+    let highlighted = escapeHTML(line);
+
+    const commentMatch = highlighted.match(/^(\s*)(#.*)$/);
     if (commentMatch) return `${commentMatch[1]}<span class="comment">${commentMatch[2]}</span>`;
 
-    let highlighted = line.replace(/(!secret\s+\S+|!lambda\s+|!include|!reference\s+\S+|!\w+)/g, '<span class="anchor">$1</span>');
+    highlighted = highlighted.replace(/(!secret\s+\S+|!lambda\s+|!include|!reference\s+\S+|!\w+)/g, '<span class="anchor">$1</span>');
 
     highlighted = highlighted.replace(/^(\s*)([A-Za-z0-9_]+)(\s*:\s*)(.*)$/, (match, indent, key, colon, value) => {
       if (value.startsWith('!secret') || value.startsWith('!lambda') || value.startsWith('!include') || value.startsWith('!')) {
         return `${indent}<span class="key">${key}</span>${colon}${value}`;
       }
-      if (value.startsWith('"') || value.startsWith("'")) {
+      if (value.startsWith('"') || value.startsWith("'") || value.startsWith('&quot;') || value.startsWith('&#039;')) {
         return `${indent}<span class="key">${key}</span>${colon}<span class="string">${value}</span>`;
       }
       if (value && !/^[\s]*$/.test(value)) {
