@@ -51,7 +51,7 @@ export function validateConfig(config, deps = {}) {
       return;
     }
 
-    if (!['stateless', 'checkable'].includes(btn.type)) {
+    if (!['stateless', 'checkable', 'timer_sync'].includes(btn.type)) {
       issues.errors.push({ message: `Button ${i + 1} has an unsupported button type.`, selector: i === selectedButtonIndex ? '.type-toggle' : null });
     }
 
@@ -82,16 +82,18 @@ export function validateConfig(config, deps = {}) {
       issues.errors.push({ message: `Button ${i + 1}: stateless buttons need at least one press action so the generated YAML has something to trigger.`, selector: i === selectedButtonIndex ? '#short-action-type' : null });
     }
 
-    if (btn.type === 'checkable' && !String(btn.haEntity || '').trim()) {
-      issues.errors.push({ message: `Button ${i + 1}: checkable mode needs a Home Assistant entity such as switch.living_room or timer.studio_light.`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
+    // Both checkable and timer_sync require HA entity and state-sync configuration
+    const needsEntitySync = btn.type === 'checkable' || btn.type === 'timer_sync';
+    if (needsEntitySync && !String(btn.haEntity || '').trim()) {
+      issues.errors.push({ message: `Button ${i + 1}: ${btn.type} mode needs a Home Assistant entity such as switch.living_room or timer.studio_light.`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
     }
 
-    if (btn.type === 'checkable') {
+    if (needsEntitySync) {
       if (!String(btn.onState || '').trim()) {
-        issues.errors.push({ message: `Button ${i + 1} checkable mode requires an on-state value.`, selector: i === selectedButtonIndex ? '#on-state' : null });
+        issues.errors.push({ message: `Button ${i + 1} ${btn.type} mode requires an on-state value.`, selector: i === selectedButtonIndex ? '#on-state' : null });
       }
       if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOn || btn.icon || '')) || !/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOff || btn.icon || ''))) {
-        issues.errors.push({ message: `Button ${i + 1} checkable mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
+        issues.errors.push({ message: `Button ${i + 1} ${btn.type} mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
       }
     }
 

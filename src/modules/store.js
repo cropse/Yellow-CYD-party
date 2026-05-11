@@ -78,6 +78,8 @@ export function createStore(options) {
 
     button(field, value, opts = {}) {
       const idx = opts.index ?? getSelectedIndex();
+      const state = getState();
+      if (idx < 0 || idx >= state.buttons.length) return;
       this.update(`Update ${field}`, state => {
         state.buttons[idx][field] = value;
       }, opts);

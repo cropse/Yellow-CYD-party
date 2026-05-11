@@ -35,7 +35,7 @@ function normalizeButton(rawButton, index, warnings = []) {
     font: ['roboto_12', 'roboto_16', 'arimo14'].includes(source.font) ? source.font : fallback.font,
     color: normalizeColor(source.color) || fallback.color,
     icon: /^\\U000F[0-9A-Fa-f]{4}$/.test(String(source.icon || '')) ? source.icon.toUpperCase() : fallback.icon,
-    type: ['stateless', 'checkable'].includes(source.type) ? source.type : fallback.type,
+    type: ['stateless', 'checkable', 'timer_sync'].includes(source.type) ? source.type : fallback.type,
     haEntity: source.haEntity ? String(source.haEntity).trim() : null,
     onState: String(source.onState || fallback.onState || 'on').trim() || 'on',
     timerDefaultLabel: String(source.timerDefaultLabel || ''),

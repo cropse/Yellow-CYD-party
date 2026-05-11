@@ -8,7 +8,7 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: './index-vite.html'
+        main: './index.html'
       },
       output: {
         manualChunks: {

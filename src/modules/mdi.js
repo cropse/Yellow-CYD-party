@@ -24,7 +24,7 @@ export async function loadMDIData() {
   }
 
   try {
-    const response = await fetch('https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/meta.json');
+    const response = await fetch('https://cdn.jsdelivr.net/npm/@mdi/svg@7.4.47/meta.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
 
@@ -46,16 +46,30 @@ export async function loadMDIData() {
   }
 }
 
+function normalizeIconCodepoint(codepoint) {
+  if (!codepoint || typeof codepoint !== 'string') return '';
+
+  let cleaned = codepoint.trim().toLowerCase().replace(/^\\?u(000)?f/i, '');
+  cleaned = cleaned.replace(/^f/i, '');
+
+  if (!/^[0-9a-f]{4,5}$/i.test(cleaned)) return '';
+  return cleaned.padStart(4, '0').toUpperCase();
+}
+
 function populateMdiMap(data) {
   if (!Array.isArray(data)) return;
   mdiData.clear();
   data.forEach(icon => {
-    const codepoint = icon.codepoint || icon.id;
-    const hex = String(codepoint).toUpperCase().padStart(4, '0');
+    const hex = normalizeIconCodepoint(icon.codepoint || icon.id);
+    if (!hex) return;
+
+    const unicode = 0xF0000 + parseInt(hex, 16);
+    if (unicode > 0x10FFFF) return;
+
     mdiData.set(`\\U000F${hex}`, {
       name: icon.name,
       codepoint: `\\U000F${hex}`,
-      char: String.fromCodePoint(0xF0000 + parseInt(hex, 16)),
+      char: String.fromCodePoint(unicode),
       category: icon.category || 'other',
       tags: icon.tags || []
     });
@@ -63,8 +77,9 @@ function populateMdiMap(data) {
 }
 
 export function getIconByCodepoint(codepoint) {
-  if (!codepoint) return null;
-  return mdiData.get(codepoint) || null;
+  const hex = normalizeIconCodepoint(codepoint);
+  if (!hex) return null;
+  return mdiData.get(`\\U000F${hex}`) || null;
 }
 
 export function searchIcons(query, limit = 200) {

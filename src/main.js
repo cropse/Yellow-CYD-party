@@ -7,25 +7,39 @@ import { normalizeColor, clampNumber, escapeHTML } from './modules/utils.js';
 import { normalizeImportedConfig } from './modules/import.js';
 import { loadMDIData, getIconByCodepoint, searchIcons } from './modules/mdi.js';
 
-function showToast(message, duration = 3000) {
+function showToast(message, type = 'success', duration = 3000) {
   const container = document.getElementById('toast-container') || createToastContainer();
   const toast = document.createElement('div');
-  toast.className = 'toast';
+  toast.className = `toast ${type}`;
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  
+  const icons = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+  };
+  
   toast.innerHTML = `
+    <span class="toast-icon" aria-hidden="true">${icons[type] || icons.success}</span>
     <span>${escapeHTML(message)}</span>
-    <button type="button" class="toast-dismiss" aria-label="Dismiss">×</button>
+    <button type="button" class="toast-dismiss" aria-label="Dismiss notification">×</button>
   `;
   
-  toast.querySelector('.toast-dismiss').addEventListener('click', () => {
-    toast.remove();
-  });
+  let removed = false;
+  const removeToast = () => {
+    if (removed) return;
+    removed = true;
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 300);
+  };
+  
+  toast.querySelector('.toast-dismiss').addEventListener('click', removeToast);
   
   container.appendChild(toast);
   
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
+  setTimeout(removeToast, duration);
 }
 
 function createToastContainer() {
@@ -62,6 +76,9 @@ let currentIconTarget = 'main';
 let selectedIconInModal = null;
 let selectedIconCategory = 'popular';
 let activeColorTheme = 'basic';
+let lastModalTrigger = null;
+
+const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 const store = createStore({
   getState: () => appState,
@@ -98,6 +115,7 @@ function saveState() {
     localStorage.setItem('cyd-config', JSON.stringify(appState));
   } catch (e) {
     console.error('Failed to save state:', e);
+    showToast('Failed to save configuration. Storage may be full.', 'error');
   }
 }
 
@@ -159,15 +177,45 @@ function renderGridPreview() {
         cell.tabIndex = 0;
         cell.setAttribute('role', 'button');
         cell.setAttribute('aria-label', `Edit ${btn.label}`);
+        cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
       } else {
         cell.innerHTML = `
           <span class="position-badge">${col + 1},${row + 1}</span>
           <span class="label text-muted">Empty</span>
         `;
         cell.classList.add('empty');
+        cell.tabIndex = -1;
       }
 
       container.appendChild(cell);
+    }
+  }
+}
+
+function handleGridKeydown(e, col, row, btnIndex) {
+  const keyMap = {
+    'ArrowRight': [1, 0],
+    'ArrowLeft': [-1, 0],
+    'ArrowDown': [0, 1],
+    'ArrowUp': [0, -1]
+  };
+  
+  const delta = keyMap[e.key];
+  if (!delta) return;
+  
+  e.preventDefault();
+  const newCol = Math.max(0, Math.min(3, col + delta[0]));
+  const newRow = Math.max(0, Math.min(2, row + delta[1]));
+  
+  const cells = document.querySelectorAll('.grid-cell');
+  const targetIndex = newRow * 4 + newCol;
+  const targetCell = cells[targetIndex];
+  
+  if (targetCell) {
+    targetCell.focus();
+    const targetBtnIndex = appState.buttons.findIndex(b => b.col === newCol && b.row === newRow);
+    if (targetBtnIndex >= 0) {
+      selectButton(targetBtnIndex);
     }
   }
 }
@@ -186,7 +234,9 @@ function renderEditorPanel() {
     b.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
 
-  document.getElementById('checkable-options').classList.toggle('hidden', btn.type !== 'checkable');
+  const isCheckableOrTimer = btn.type === 'checkable' || btn.type === 'timer_sync';
+  document.getElementById('checkable-options').classList.toggle('hidden', !isCheckableOrTimer);
+  document.getElementById('timer-default-label-group')?.classList.toggle('hidden', btn.type !== 'timer_sync');
   document.getElementById('led-control').checked = btn.ledControl;
   document.getElementById('ha-entity').value = btn.haEntity || '';
   document.getElementById('on-state').value = btn.onState || 'on';
@@ -227,7 +277,6 @@ function renderActionFields(containerId, actionType, data, isLong) {
 
     const label = document.createElement('label');
     label.textContent = field.label;
-    group.appendChild(label);
 
     let input;
     if (field.type === 'select') {
@@ -253,6 +302,9 @@ function renderActionFields(containerId, actionType, data, isLong) {
     }
 
     input.id = `${containerId}-${field.name}`;
+    label.htmlFor = input.id;
+    group.appendChild(label);
+    input.classList.add('form-control');
     input.addEventListener('focus', () => pushHistory());
     input.addEventListener('change', (e) => {
       const pressKey = isLong ? 'longPress' : 'shortPress';
@@ -299,6 +351,7 @@ function renderColorSwatches() {
     btn.type = 'button';
     btn.className = 'color-swatch';
     btn.style.backgroundColor = `#${color}`;
+    btn.setAttribute('aria-label', `Select color #${color}`);
     btn.dataset.color = color;
     btn.addEventListener('click', () => {
       store.button('color', color);
@@ -306,8 +359,6 @@ function renderColorSwatches() {
     });
     container.appendChild(btn);
   });
-
-  renderColorThemePresets();
 }
 
 function updateColorDisplay(color) {
@@ -375,7 +426,9 @@ function generateYAML() {
 }
 
 function selectButton(index) {
-  selectedButtonIndex = index;
+  const clamped = Math.max(0, Math.min(index, appState.buttons.length - 1));
+  selectedButtonIndex = clamped;
+  window.selectedButtonIndex = clamped;
   renderGridPreview();
   renderEditorPanel();
 }
@@ -388,7 +441,7 @@ function runValidation(opts = {}) {
   const result = ValidationEngine.validateConfig(appState, { selectedButtonIndex, ACTION_SCHEMAS });
   if (opts.showSummary) {
     renderValidationSummary(result);
-    document.getElementById('validation-modal').classList.add('active');
+    openModal('validation-modal', document.getElementById('validation-modal-close'));
   }
   return result;
 }
@@ -437,7 +490,7 @@ function renderValidationSummary(result) {
       const warn = secretWarnings[idx];
       if (warn && warn.secretPath) {
         setValueAtPath(warn.secretPath, warn.secretRef);
-        showToast('Converted to secret reference');
+        showToast('Converted to secret reference', 'success');
       }
     });
   });
@@ -498,7 +551,7 @@ function setupHeaderActions() {
   }
 
   document.getElementById('export-btn')?.addEventListener('click', () => withLoading('export-btn', exportConfig));
-  document.getElementById('export-clipboard-btn')?.addEventListener('click', () => withLoading('export-clipboard-btn', copyConfigToClipboard));
+  document.getElementById('copy-yaml-header-btn')?.addEventListener('click', () => withLoading('copy-yaml-header-btn', copyYAMLToClipboard));
   document.getElementById('validate-btn')?.addEventListener('click', () => withLoading('validate-btn', () => runValidation({ showSummary: true })));
   document.getElementById('download-yaml-btn')?.addEventListener('click', () => withLoading('download-yaml-btn', downloadYAML));
   document.getElementById('copy-yaml-btn')?.addEventListener('click', () => withLoading('copy-yaml-btn', copyYAMLToClipboard));
@@ -569,7 +622,9 @@ function setupButtonEditor() {
       });
       btn.classList.add('active');
       btn.setAttribute('aria-checked', 'true');
-      document.getElementById('checkable-options').classList.toggle('hidden', type !== 'checkable');
+      const isCheckableOrTimer = type === 'checkable' || type === 'timer_sync';
+      document.getElementById('checkable-options').classList.toggle('hidden', !isCheckableOrTimer);
+      document.getElementById('timer-default-label-group')?.classList.toggle('hidden', type !== 'timer_sync');
     });
   });
 
@@ -607,14 +662,24 @@ function setupColorPickers() {
   });
 }
 
-function setupIconPickers() {
-  document.getElementById('icon-picker-trigger')?.addEventListener('click', () => openIconPicker('main'));
-  document.getElementById('icon-picker-trigger')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openIconPicker('main'); }
+function setupIconTrigger(triggerId, target) {
+  const trigger = document.getElementById(triggerId);
+  trigger?.addEventListener('click', () => openIconPicker(target));
+  trigger?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openIconPicker(target);
+    }
   });
-  document.getElementById('icon-on-trigger')?.addEventListener('click', () => openIconPicker('on'));
-  document.getElementById('icon-off-trigger')?.addEventListener('click', () => openIconPicker('off'));
 }
+
+function setupIconPickers() {
+  setupIconTrigger('icon-picker-trigger', 'main');
+  setupIconTrigger('icon-on-trigger', 'on');
+  setupIconTrigger('icon-off-trigger', 'off');
+}
+
+let iconSearchTimer = null;
 
 function setupModals() {
   document.getElementById('icon-modal-close')?.addEventListener('click', closeIconPicker);
@@ -622,7 +687,6 @@ function setupModals() {
   document.getElementById('validation-modal-close')?.addEventListener('click', closeValidationModal);
   document.getElementById('validation-close-btn')?.addEventListener('click', closeValidationModal);
 
-  let iconSearchTimer;
   document.getElementById('icon-search')?.addEventListener('input', (e) => {
     clearTimeout(iconSearchTimer);
     iconSearchTimer = setTimeout(() => renderIconResults(e.target.value), 150);
@@ -640,8 +704,16 @@ function setupModals() {
     if (e.target.id === 'icon-modal') closeIconPicker();
   });
 
+  document.getElementById('icon-modal')?.addEventListener('keydown', (e) => {
+    trapModalFocus(e, e.currentTarget);
+  });
+
   document.getElementById('validation-modal')?.addEventListener('click', (e) => {
     if (e.target.id === 'validation-modal') closeValidationModal();
+  });
+
+  document.getElementById('validation-modal')?.addEventListener('keydown', (e) => {
+    trapModalFocus(e, e.currentTarget);
   });
 }
 
@@ -718,22 +790,63 @@ function updateHistoryButtons() {
   if (redoBtn) redoBtn.disabled = !store.canRedo();
 }
 
+function openModal(modalId, initialFocus) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+  initialFocus?.focus();
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  if (lastModalTrigger?.isConnected) lastModalTrigger.focus();
+  lastModalTrigger = null;
+}
+
+function trapModalFocus(e, modal) {
+  if (e.key !== 'Tab') return;
+
+  const focusable = Array.from(modal.querySelectorAll(FOCUSABLE_SELECTOR))
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
 function openIconPicker(target) {
   currentIconTarget = target;
-  document.getElementById('icon-modal').classList.add('active');
-  document.getElementById('icon-search').value = '';
-  document.getElementById('icon-search').focus();
+  const search = document.getElementById('icon-search');
+  if (search) search.value = '';
   renderIconCategories();
   renderIconResults('');
+  openModal('icon-modal', search);
 }
 
 function closeIconPicker() {
-  document.getElementById('icon-modal').classList.remove('active');
+  clearTimeout(iconSearchTimer);
+  iconSearchTimer = null;
+  closeModal('icon-modal');
   selectedIconInModal = null;
 }
 
 function closeValidationModal() {
-  document.getElementById('validation-modal').classList.remove('active');
+  closeModal('validation-modal');
 }
 
 function renderIconCategories() {
@@ -797,12 +910,12 @@ function selectIcon(codepoint) {
 
 function copySelectedButton() {
   copiedButtonConfig = structuredClone(appState.buttons[selectedButtonIndex]);
-  showToast('Button config copied');
+  showToast('Button config copied', 'success');
 }
 
 function pasteToSelectedButton() {
   if (!copiedButtonConfig) {
-    showToast('No button config to paste');
+    showToast('No button config to paste', 'warning');
     return;
   }
   store.update('Paste button config', state => {
@@ -812,7 +925,7 @@ function pasteToSelectedButton() {
     pasted.row = state.buttons[selectedButtonIndex].row;
     state.buttons[selectedButtonIndex] = pasted;
   });
-  showToast('Button config pasted');
+  showToast('Button config pasted', 'success');
 }
 
 function resetSelectedButton() {
@@ -820,7 +933,7 @@ function resetSelectedButton() {
     const fallback = DEFAULT_CONFIG.buttons[selectedButtonIndex];
     state.buttons[selectedButtonIndex] = structuredClone(fallback);
   });
-  showToast('Button reset to default');
+  showToast('Button reset to default', 'success');
 }
 
 function exportConfig() {
@@ -832,7 +945,7 @@ function exportConfig() {
   a.download = `${appState.deviceName || 'cyd'}-config.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('Configuration exported');
+  showToast('Configuration exported', 'success');
 }
 
 function importConfig(file) {
@@ -846,12 +959,12 @@ function importConfig(file) {
       }, { skipUndo: true });
       if (warnings.length) {
         console.log('Import warnings:', warnings);
-        showToast(`Imported with ${warnings.length} adjustments`);
+        showToast(`Imported with ${warnings.length} adjustments`, 'warning');
       } else {
-        showToast('Configuration imported');
+        showToast('Configuration imported', 'success');
       }
     } catch (err) {
-      showToast('Import failed: invalid JSON');
+      showToast('Import failed: invalid JSON', 'error');
       console.error('Import error:', err);
     }
   };
@@ -861,7 +974,7 @@ function importConfig(file) {
 function downloadYAML() {
   const yaml = generateYAML();
   if (!yaml) {
-    showToast('Cannot download: fix validation errors first');
+    showToast('Cannot download: fix validation errors first', 'error');
     return;
   }
   const blob = new Blob([yaml], { type: 'text/yaml' });
@@ -871,28 +984,28 @@ function downloadYAML() {
   a.download = `${appState.deviceName || 'cyd'}.yaml`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('YAML downloaded');
+  showToast('YAML downloaded', 'success');
 }
 
 function copyYAMLToClipboard() {
   const yaml = generateYAML();
   if (!yaml) {
-    showToast('Cannot copy: fix validation errors first');
+    showToast('Cannot copy: fix validation errors first', 'error');
     return;
   }
   navigator.clipboard.writeText(yaml).then(() => {
-    showToast('YAML copied to clipboard');
+    showToast('YAML copied to clipboard', 'success');
   }).catch(() => {
-    showToast('Failed to copy YAML');
+    showToast('Failed to copy YAML', 'error');
   });
 }
 
 function copyConfigToClipboard() {
   const json = JSON.stringify(appState, null, 2);
   navigator.clipboard.writeText(json).then(() => {
-    showToast('Config copied to clipboard');
+    showToast('Config copied to clipboard', 'success');
   }).catch(() => {
-    showToast('Failed to copy config');
+    showToast('Failed to copy config', 'error');
   });
 }
 
@@ -913,8 +1026,14 @@ async function withLoading(buttonId, task) {
   }
 }
 
-window.appState = appState;
-window.selectedButtonIndex = selectedButtonIndex;
+Object.defineProperty(window, 'appState', {
+  get: () => appState,
+  set: (val) => { appState = val; }
+});
+Object.defineProperty(window, 'selectedButtonIndex', {
+  get: () => selectedButtonIndex,
+  set: (val) => { selectedButtonIndex = val; }
+});
 window.DEFAULT_CONFIG = DEFAULT_CONFIG;
 window.PRESETS = PRESETS;
 window.ACTION_SCHEMAS = ACTION_SCHEMAS;

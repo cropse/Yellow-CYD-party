@@ -19,6 +19,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "vite": "^5.4.21"
+    "vite": "^5.4.19"
+  },
+  "dependencies": {
+    "oh-my-opencode-linux-x64": "^4.0.0"
   }
 }

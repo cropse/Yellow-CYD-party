@@ -32,20 +32,18 @@ A Vite-based web app that generates ESPHome YAML configurations for CYD (Cheap Y
 | `src/modules/state.js` | Global state and store initialization (~50 lines) |
 | `src/modules/toast.js` | Toast notification system (~35 lines) |
 
-### Legacy Files (kept for reference/testing)
+### Source Files (`src/`)
 
 | File | Role |
 |---|---|
-| `index.html` | Original single-file app (~5300 lines). Kept for backward compatibility and `verify-cyd.js` tests. |
-| `index-vite.html` | New minimal HTML entry point for Vite (~220 lines). |
-| `verify-cyd.js` | Node.js test script. Tests against original `index.html` JS extracted via `vm`. |
-| `back-garden-cyd-test.yaml` | Golden reference YAML for validation. |
+| `index.html` | Vite HTML entry point (~280 lines). |
+| `src/main.js` | Entry point (~940 lines). Initializes app, sets up event listeners, orchestrates modules. |
 
 ### Build Output (`dist/`)
 
 | File | Role |
 |---|---|
-| `dist/index-vite.html` | Production HTML entry |
+| `dist/index.html` | Production HTML entry |
 | `dist/assets/main-*.js` | Main bundle (~28KB gzipped) |
 | `dist/assets/main-*.css` | CSS bundle (~18KB gzipped) |
 | `dist/assets/yaml-engine-*.js` | YAML generation chunk (~14KB gzipped) |
