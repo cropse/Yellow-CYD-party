@@ -327,29 +327,28 @@ export function generateLVGLWidgets(buttons, deps) {
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;
 
     const hasDualActions = btn.shortPress?.enabled && btn.longPress?.enabled;
+    const fontLine = btn.font !== 'roboto_12' ? `font: ${btn.font}\n                    ` : '';
     if (isCheckable && !hasTimerDefaultLabel && !hasDualActions) {
       const colorValue = `0x${btn.color}`;
       widgets.push(`              - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: ${btn.id}
-                    col: ${btn.col}
-                    row: ${btn.row}
-                    color: ${colorValue}
-                    icon: ${yamlQuoted(btn.icon)}
-                    font: ${btn.font}
-                    label: ${yamlQuoted(btn.label)}`);
+                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                   vars:
+                     id: ${btn.id}
+                     col: ${btn.col}
+                     row: ${btn.row}
+                     color: ${colorValue}
+                     icon: ${yamlQuoted(btn.icon)}
+                    ${fontLine}label: ${yamlQuoted(btn.label)}`);
     } else {
       widgets.push(`              - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget.yaml
-                  vars:
-                    id: ${btn.id}
-                    col: ${btn.col}
-                    row: ${btn.row}
-                    color: ${colorRef}
-                    icon: ${yamlQuoted(btn.icon)}
-                    font: ${btn.font}
-                    label: ${yamlQuoted(btn.label)}`);
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: ${btn.id}
+                     col: ${btn.col}
+                     row: ${btn.row}
+                     color: ${colorRef}
+                     icon: ${yamlQuoted(btn.icon)}
+                    ${fontLine}label: ${yamlQuoted(btn.label)}`);
     }
   });
 
