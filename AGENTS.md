@@ -130,7 +130,7 @@ Before considering generator changes complete:
 - **Do not modify `index.html` directly for new features.** Add code to `src/modules/` instead.
 - **Do not check in `esphome/` directory.** It is gitignored and contains hardware-specific configs and secrets.
 - **YAML string escaping:** ESPHome glyph strings use `\U000Fxxxx` with double backslash in YAML.
-- **Font files:** The icon picker expects `fonts/materialdesignicons-webfont.ttf` to exist. Vite copies this to `dist/assets/`.
+- **Font files:** The icon picker expects `cyd-lib/fonts/materialdesignicons-webfont.ttf` to exist. Vite copies this to `dist/assets/`.
 
 ## Deployment
 

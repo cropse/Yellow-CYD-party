@@ -1,0 +1,29 @@
+# lvgl_sync_template.yaml
+substitutions:
+  ts_id: ""
+  ha_entity: ""
+  on_state: "on"
+  btn_id: ""
+  ico_on: ""
+  ico_off: ""
+
+text_sensor:
+  - platform: homeassistant
+    id: ${ts_id}
+    entity_id: ${ha_entity}
+    on_value:
+      then:
+        - lvgl.widget.update:
+            id: ${btn_id}
+            state:
+              checked: !lambda 'return x == "${on_state}";'
+              disabled: !lambda 'return x == "unavailable" || x == "unknown";'
+        - lvgl.label.update:
+            id: lbl_${btn_id}
+            text: !lambda |-
+              // No .c_str() needed, we use the literal substitution directly
+              if (x == "${on_state}") {
+                return "${ico_on}";
+              } else {
+                return "${ico_off}";
+              }

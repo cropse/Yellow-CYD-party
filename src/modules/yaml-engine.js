@@ -23,12 +23,17 @@ export function yamlScalar(value) {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   const text = String(value);
   if (text.startsWith('!secret ') || text.startsWith('!lambda ')) return text;
-  if (/^[A-Za-z0-9_.\/-]+$/.test(text) && !/^(true|false|null|yes|no|on|off)$/i.test(text)) return text;
-  return `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+  if (/^[A-Za-z0-9_.\/-]+$/.test(text) && !/^(true|false|null|yes|no|on|off)$/i.test(text) && !/^\d+(\.\d+)?$/.test(text)) return text;
+  // Don't double-backslash icon codepoints like \U000Fxxxx - they're already YAML-ready
+  const escaped = text.startsWith('\\U000F') ? text : text.replace(/\\/g, '\\\\');
+  return `"${escaped.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
 }
 
 export function yamlQuoted(value) {
-  return `"${String(value ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+  const text = String(value ?? '');
+  // Don't double-backslash icon codepoints like \U000Fxxxx - they're already YAML-ready
+  const escaped = text.startsWith('\\U000F') ? text : text.replace(/\\/g, '\\\\');
+  return `"${escaped.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
 }
 
 export function toYAML(obj, indent = 0) {
@@ -249,9 +254,8 @@ ${clicks.join('\n')}`);
 }
 
 export function generatePackages(buttons, deps) {
-  const { actionSchemas, yamlScalar } = deps;
+  const { yamlScalar, yamlQuoted } = deps;
   const packages = [];
-  const ledSyncPackages = [];
 
   buttons.forEach((btn, i) => {
     if (btn.type !== 'checkable' || !String(btn.haEntity || '').trim()) return;
@@ -260,86 +264,30 @@ export function generatePackages(buttons, deps) {
 
     if (btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim()) {
       const timerLabel = btn.timerDefaultLabel.replace(/"/g, '\\"');
-      packages.push(`  btn_timer_${i + 1}:
-    text_sensor:
-      - platform: homeassistant
-        id: ts_${btn.id}_timer
-        entity_id: ${yamlScalar(btn.haEntity)}
-        attribute: finishes_at
-        on_value:
-          then:
-            - lvgl.label.update:
-                id: lbl_text_${btn.id}
-                text: !lambda |-
-                  if (x == "unknown" || x == "unavailable" || x == "") {
-                    return "${timerLabel}";
-                  }
-                  return "Active";
-    interval:
-      - interval: 1s
-        then:
-          - lvgl.label.update:
-              id: lbl_text_${btn.id}
-              text: !lambda |-
-                auto ts = id(ts_${btn.id}_timer).state;
-                if (ts == "unknown" || ts == "unavailable" || ts == "") {
-                  return "${timerLabel}";
-                }
-                int year, month, day, hour, minute, second;
-                if (sscanf(ts.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second) != 6) {
-                  return "${timerLabel}";
-                }
-                struct tm target_tm = {0};
-                target_tm.tm_year = year - 1900;
-                target_tm.tm_mon = month - 1;
-                target_tm.tm_mday = day;
-                target_tm.tm_hour = hour;
-                target_tm.tm_min = minute;
-                target_tm.tm_sec = second;
-                time_t target_time = mktime(&target_tm);
-                time_t now = id(esptime).now().timestamp;
-                int diff = (int)difftime(target_time, now);
-                if (diff <= 0) {
-                  return "${timerLabel}";
-                }
-                int h = diff / 3600;
-                int m = (diff % 3600) / 60;
-                int s = diff % 60;
-                char buf[16];
-                if (h > 0) {
-                  sprintf(buf, "%d:%02d:%02d", h, m, s);
-                } else {
-                  sprintf(buf, "%02d:%02d", m, s);
-                }
-                return buf;`);
+      packages.push(`  btn_timer_${i + 1}: !include
+    file: cyd-lib/templates/timer_sync_template.yaml
+    vars:
+      ts_id: ts_${btn.id}_timer
+      ha_entity: ${yamlScalar(btn.haEntity)}
+      btn_id: ${btn.id}
+      default_label: ${yamlQuoted(timerLabel)}`);
     } else {
       const iconOn = btn.iconOn || btn.icon;
       const iconOff = btn.iconOff || btn.icon;
 
-      packages.push(`  btn_logic_${i + 1}:
-    text_sensor:
-      - platform: homeassistant
-        id: ts_${btn.id}
-        entity_id: ${yamlScalar(btn.haEntity)}
-        on_value:
-          then:
-            - lvgl.widget.update:
-                id: ${btn.id}
-                state:
-                  checked: !lambda 'return x == "${escapedState}";'
-                  disabled: !lambda 'return x == "unavailable" || x == "unknown";'
-            - lvgl.label.update:
-                id: lbl_${btn.id}
-                text: !lambda |-
-                  if (x == "${escapedState}") {
-                    return "${iconOn}";
-                  } else {
-                    return "${iconOff}";
-                  }`);
+      packages.push(`  btn_logic_${i + 1}: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_${btn.id}
+      ha_entity: ${yamlScalar(btn.haEntity)}
+      btn_id: ${btn.id}
+      on_state: "${escapedState}"
+      ico_on: "${iconOn}"
+      ico_off: "${iconOff}"`);
     }
 
     if (btn.ledControl) {
-      ledSyncPackages.push(`  led_sync_${i + 1}:
+      packages.push(`  led_sync_${i + 1}:
     text_sensor:
       - platform: homeassistant
         id: ts_led_${btn.id}
@@ -360,9 +308,8 @@ export function generatePackages(buttons, deps) {
     }
   });
 
-  const allPackages = [...packages, ...ledSyncPackages];
-  if (allPackages.length === 0) return '';
-  return `packages:\n${allPackages.join('\n')}`;
+  if (packages.length === 0) return '';
+  return `packages:\n${packages.join('\n')}`;
 }
 
 export function generateLVGLWidgets(buttons, deps) {
@@ -380,56 +327,28 @@ export function generateLVGLWidgets(buttons, deps) {
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;
 
     if (isCheckable && !hasTimerDefaultLabel) {
-      widgets.push(`              - button:
-                  id: ${btn.id}
-                  grid_cell_column_pos: ${btn.col}
-                  grid_cell_row_pos: ${btn.row}
-                  grid_cell_x_align: STRETCH
-                  grid_cell_y_align: STRETCH
-                  bg_color: default_button_bg_color
-                  pressed:
-                    bg_color: default_button_pressed_bg_color
-                  checkable: false
-                  checked:
-                    text_color: "${btn.color}"
-                  widgets:
-                    - label:
-                        id: lbl_${btn.id}
-                        text: ${yamlQuoted(btn.icon)}
-                        text_font: mdi_icons
-                        align: center
-                        y: -8
-                    - label:
-                        id: lbl_text_${btn.id}
-                        text_font: ${btn.font}
-                        text: ${yamlQuoted(btn.label)}
-                        align: center
-                        y: 20`);
+      const colorValue = `0x${btn.color}`;
+      widgets.push(`              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: ${btn.id}
+                    col: ${btn.col}
+                    row: ${btn.row}
+                    color: ${colorValue}
+                    icon: ${yamlQuoted(btn.icon)}
+                    font: ${btn.font}
+                    label: ${yamlQuoted(btn.label)}`);
     } else {
-      widgets.push(`              - button:
-                  id: ${btn.id}
-                  grid_cell_column_pos: ${btn.col}
-                  grid_cell_row_pos: ${btn.row}
-                  grid_cell_x_align: STRETCH
-                  grid_cell_y_align: STRETCH
-                  bg_color: default_button_bg_color
-                  pressed:
-                    bg_color: default_button_pressed_bg_color
-                  widgets:
-                    - label:
-                        id: lbl_${btn.id}
-                        text: ${yamlQuoted(btn.icon)}
-                        text_font: mdi_icons
-                        text_color: ${colorRef}
-                        align: center
-                        y: -8
-                    - label:
-                        id: lbl_text_${btn.id}
-                        text_font: ${btn.font}
-                        text: ${yamlQuoted(btn.label)}
-                        text_color: ${colorRef}
-                        align: center
-                        y: 20`);
+      widgets.push(`              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget.yaml
+                  vars:
+                    id: ${btn.id}
+                    col: ${btn.col}
+                    row: ${btn.row}
+                    color: ${colorRef}
+                    icon: ${yamlQuoted(btn.icon)}
+                    font: ${btn.font}
+                    label: ${yamlQuoted(btn.label)}`);
     }
   });
 

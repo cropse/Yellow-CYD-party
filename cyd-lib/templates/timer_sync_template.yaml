@@ -1,0 +1,69 @@
+# timer_sync_template.yaml
+substitutions:
+  ts_id: ""
+  ha_entity: ""
+  btn_id: ""
+  default_label: ""
+
+text_sensor:
+  - platform: homeassistant
+    id: ${ts_id}
+    entity_id: ${ha_entity}
+    attribute: finishes_at
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_text_${btn_id}
+            text: !lambda |-
+              if (x == "unknown" || x == "unavailable" || x == "") {
+                return "${default_label}";
+              }
+              return "Active";
+
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: lbl_text_${btn_id}
+          text: !lambda |-
+            auto ts = id(${ts_id}).state;
+            if (ts == "unknown" || ts == "unavailable" || ts == "") {
+              return "${default_label}";
+            }
+            
+            // Parse ISO 8601 timestamp (e.g., 2024-05-24T12:00:00+00:00)
+            int year, month, day, hour, minute, second;
+            if (sscanf(ts.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second) != 6) {
+              return "${default_label}";
+            }
+            
+            struct tm target_tm = {0};
+            target_tm.tm_year = year - 1900;
+            target_tm.tm_mon = month - 1;
+            target_tm.tm_mday = day;
+            target_tm.tm_hour = hour;
+            target_tm.tm_min = minute;
+            target_tm.tm_sec = second;
+            
+            // Note: mktime uses local time, but HA provides UTC. 
+            // For simple countdown, as long as 'now' is also UTC, it works.
+            time_t target_time = mktime(&target_tm);
+            time_t now = id(esptime).now().timestamp;
+            
+            int diff = (int)difftime(target_time, now);
+            
+            if (diff <= 0) {
+              return "${default_label}";
+            }
+            
+            int h = diff / 3600;
+            int m = (diff % 3600) / 60;
+            int s = diff % 60;
+            
+            char buf[16];
+            if (h > 0) {
+              sprintf(buf, "%d:%02d:%02d", h, m, s);
+            } else {
+              sprintf(buf, "%02d:%02d", m, s);
+            }
+            return buf;

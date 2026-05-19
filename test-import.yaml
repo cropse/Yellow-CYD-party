@@ -1,5 +1,5 @@
 substitutions:     # Modify these to fit your needs
-  font_directory: fonts/
+  font_directory: cyd-lib/fonts/
   width: 320
   height: 240
   device_name: back-garden-cyd

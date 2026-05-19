@@ -1,0 +1,646 @@
+substitutions:
+  font_directory: cyd-lib/fonts/
+  width: "320"
+  height: "240"
+  device_name: back-garden-cyd
+  nice_name: "Back Garden CYD"
+  ap_password: "undefined"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${nice_name}
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${nice_name} Fallback Hotspot"
+    password: "${ap_password}"
+
+logger:
+
+time:
+  - platform: sntp
+    id: esptime
+
+captive_portal:
+
+i2c:
+  - sda: 27
+    scl: 22
+    scan: true
+
+spi:
+  - id: tft
+    clk_pin: 14
+    mosi_pin: 13
+    miso_pin:
+      number: 12
+      ignore_strapping_warning: true
+  - id: touch
+    clk_pin: 25
+    mosi_pin: 32
+    miso_pin: 39
+
+output:
+  - id: backlight_pwm
+    platform: ledc
+    pin: 21
+  - id: output_red
+    platform: ledc
+    pin: 4
+    inverted: true
+  - id: output_green
+    platform: ledc
+    pin: 16
+    inverted: true
+  - id: output_blue
+    platform: ledc
+    pin: 17
+    inverted: true
+
+light:
+  - id: display_backlight
+    platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    restore_mode: ALWAYS_ON
+  - id: led
+    platform: rgb
+    red: output_red
+    green: output_green
+    blue: output_blue
+    restore_mode: ALWAYS_OFF
+
+display:
+  - id: main_display
+    platform: ili9xxx
+    model: TFT 2.4R
+    spi_id: tft
+    cs_pin:
+      number: 15
+      ignore_strapping_warning: true
+    dc_pin:
+      number: 2
+      ignore_strapping_warning: true
+    invert_colors: false
+    color_palette: 8BIT
+    update_interval: never
+    auto_clear_enabled: false
+    transform:
+      swap_xy: true
+    dimensions:
+      width: ${width}
+      height: ${height}
+
+touchscreen:
+  - id: main_touchscreen
+    platform: xpt2046
+    spi_id: touch
+    cs_pin: 33
+    interrupt_pin: 36
+    threshold: 400
+    calibration:
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    transform:
+      swap_xy: true
+    on_release:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: display_backlight
+
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 600
+    id: roboto_12
+    bpp: 2
+    size: 12
+    glyphs:
+      - "0123456789 /%':"
+      - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      - "abcdefghijklmnopqrstuvwxyz"
+  - file:
+      path: ${font_directory}Arimo-Regular.ttf
+      type: local
+    id: arimo14
+    size: 14
+    bpp: 2
+    glyphs:
+      - "0123456789 /%':"
+      - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      - "abcdefghijklmnopqrstuvwxyz"
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 800
+    id: roboto_16
+    bpp: 2
+    size: 16
+    glyphs:
+      - "0123456789 /%':"
+      - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      - "abcdefghijklmnopqrstuvwxyz"
+  - file: ${font_directory}materialdesignicons-webfont.ttf
+    id: mdi_icons
+    size: 48
+    glyphs:
+      - "\U000F1B94"
+      - "\U000F0583"
+      - "\U000F059C"
+      - "\U000F0594"
+      - "\U000F040E"
+      - "\U000F040A"
+      - "\U000F03E4"
+      - "\U000F032A"
+      - "\U000F024A"
+      - "\U000F1846"
+      - "\U000F1847"
+      - "\U000F0402"
+      - "\U000F1A5C"
+      - "\U000F17C9"
+      - "\U000F091D"
+      - "\U000F1915"
+      - "\U000F025A"
+
+color:
+  - id: room_bg_color
+    hex: "000000"
+  - id: default_button_bg_color
+    hex: "000000"
+  - id: default_button_pressed_bg_color
+    hex: "D3D3D3"
+  - id: btn_1_color
+    hex: "FF0000"
+  - id: btn_2_color
+    hex: "FF7F00"
+  - id: btn_3_color
+    hex: "FFFF00"
+  - id: btn_4_color
+    hex: "00FF00"
+  - id: btn_5_color
+    hex: "FF1493"
+  - id: btn_6_color
+    hex: "800080"
+  - id: btn_7_color
+    hex: "0000FF"
+  - id: btn_8_color
+    hex: "00FFFF"
+  - id: btn_9_color
+    hex: "00FF00"
+  - id: btn_10_color
+    hex: "FFFF00"
+  - id: btn_11_color
+    hex: "FFFF00"
+  - id: btn_12_color
+    hex: "FB852B"
+
+number:
+  - platform: template
+    name: LVGL Screen timeout
+    optimistic: true
+    id: display_timeout
+    unit_of_measurement: "s"
+    initial_value: 600
+    restore_value: true
+    min_value: 90
+    max_value: 3600
+    step: 5
+    mode: box
+
+binary_sensor:
+  - platform: lvgl
+    widget: btn_1
+    name: "Button 1"
+    id: btn_1_pressed
+    on_click:
+      - min_length: 1000ms
+        max_length: 5000ms
+        then:
+          - logger.log: "Button 1 long press"
+          - homeassistant.action:
+              action: script.go_to_sleep
+  - platform: lvgl
+    widget: btn_2
+    name: "Button 2"
+    id: btn_2_pressed
+    on_click:
+      - min_length: 1000ms
+        max_length: 5000ms
+        then:
+          - logger.log: "Button 2 long press"
+          - homeassistant.action:
+              action: script.leave_home
+  - platform: lvgl
+    widget: btn_3
+    name: "Button 3"
+    id: btn_3_pressed
+    on_click:
+      - min_length: 1000ms
+        max_length: 5000ms
+        then:
+          - logger.log: "Button 3 long press"
+          - homeassistant.action:
+              action: automation.trigger
+              data:
+                entity_id: automation.i_m_wake
+  - platform: lvgl
+    widget: btn_4
+    name: "Button 4"
+    id: btn_4_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 4 short click"
+          - homeassistant.action:
+              action: media_player.media_play_pause
+              data:
+                device_id: 31e23566034de0e54e242c1dc7c49534
+      - min_length: 500ms
+        max_length: 5000ms
+        then:
+          - logger.log: "Button 4 long press"
+          - homeassistant.action:
+              action: media_player.media_next_track
+              data:
+                device_id: 31e23566034de0e54e242c1dc7c49534
+  - platform: lvgl
+    widget: btn_5
+    name: "Button 5"
+    id: btn_5_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 5 short click"
+          - homeassistant.action:
+              action: switch.toggle
+              data:
+                entity_id: switch.0xa4c138eaeaa49145_l1
+  - platform: lvgl
+    widget: btn_6
+    name: "Button 6"
+    id: btn_6_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 6 short click"
+          - homeassistant.action:
+              action: script.watch_a_studio_plant
+  - platform: lvgl
+    widget: btn_7
+    name: "Button 7"
+    id: btn_7_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 7 short click"
+          - homeassistant.action:
+              action: cover.set_cover_position
+              data:
+                device_id: 1fa4679165a72e406c63bec6b74b7c63
+                position: "30"
+  - platform: lvgl
+    widget: btn_8
+    name: "Button 8"
+    id: btn_8_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 8 short click"
+          - homeassistant.action:
+              action: cover.open_cover
+              data:
+                entity_id: cover.sonoff_1000faa95f
+      - min_length: 500ms
+        max_length: 10000ms
+        then:
+          - logger.log: "Button 8 long press"
+          - homeassistant.action:
+              action: cover.close_cover
+              data:
+                entity_id: cover.sonoff_1000faa95f
+  - platform: lvgl
+    widget: btn_9
+    name: "Button 9"
+    id: btn_9_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 9 short click"
+          - homeassistant.action:
+              action: switch.turn_off
+              data:
+                entity_id: switch.virtual_pill_alert
+  - platform: lvgl
+    widget: btn_10
+    name: "Button 10"
+    id: btn_10_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 10 short click"
+          - homeassistant.action:
+              action: script.toggle_studio_room
+  - platform: lvgl
+    widget: btn_11
+    name: "Button 11"
+    id: btn_11_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 11 short click"
+          - homeassistant.action:
+              action: script.toggle_living_room
+  - platform: lvgl
+    widget: btn_12
+    name: "Button 12"
+    id: btn_12_pressed
+    on_click:
+      - min_length: 50ms
+        max_length: 500ms
+        then:
+          - logger.log: "Button 12 short click"
+          - homeassistant.action:
+              action: script.toggle_eat_time
+
+packages:
+  btn_logic_3: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_3
+      ha_entity: switch.virtual_is_wake
+      btn_id: btn_3
+      on_state: "on"
+      ico_on: "\U000F059C"
+      ico_off: "\U000F0594"
+  btn_logic_4: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_4
+      ha_entity: media_player.spotify_mememe
+      btn_id: btn_4
+      on_state: "playing"
+      ico_on: "\U000F040A"
+      ico_off: "\U000F03E4"
+  btn_timer_6: !include
+    file: cyd-lib/templates/timer_sync_template.yaml
+    vars:
+      ts_id: ts_btn_6_timer
+      ha_entity: timer.studio_balcony_plant_light_timer
+      btn_id: btn_6
+      default_label: "Studio Garden"
+  btn_logic_8: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_8
+      ha_entity: cover.sonoff_1000faa95f
+      btn_id: btn_8
+      on_state: "opening"
+      ico_on: "\U000F1846"
+      ico_off: "\U000F1847"
+  btn_logic_9: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_9
+      ha_entity: switch.virtual_pill_alert
+      btn_id: btn_9
+      on_state: "on"
+      ico_on: "\U000F0402"
+      ico_off: "\U000F1A5C"
+  led_sync_9:
+    text_sensor:
+      - platform: homeassistant
+        id: ts_led_btn_9
+        entity_id: switch.virtual_pill_alert
+        on_value:
+          then:
+            - if:
+                condition:
+                  lambda: 'return x == "on";'
+                then:
+                  - light.turn_on:
+                      id: led
+                      red: 0%
+                      green: 100%
+                      blue: 0%
+                else:
+                  - light.turn_off: led
+  btn_logic_10: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_10
+      ha_entity: switch.sonoff_10010ff64b_2
+      btn_id: btn_10
+      on_state: "on"
+      ico_on: "\U000F091D"
+      ico_off: "\U000F17C9"
+  btn_logic_11: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_11
+      ha_entity: switch.sonoff_10010ff602_2
+      btn_id: btn_11
+      on_state: "on"
+      ico_on: "\U000F091D"
+      ico_off: "\U000F17C9"
+  btn_logic_12: !include
+    file: cyd-lib/templates/lvgl_sync_template.yaml
+    vars:
+      ts_id: ts_btn_12
+      ha_entity: switch.sonoff_1000f57db2_1
+      btn_id: btn_12
+      on_state: "on"
+      ico_on: "\U000F025A"
+      ico_off: "\U000F1915"
+
+lvgl:
+  on_idle:
+    timeout: !lambda "return (id(display_timeout).state * 1000);"
+    then:
+      - logger.log: "LVGL is idle"
+      - light.turn_off: display_backlight
+      - lvgl.pause:
+  buffer_size: 25%
+  touchscreens:
+    - touchscreen_id: main_touchscreen
+      long_press_time: 2s
+  theme:
+    button:
+      bg_color: 0x000000
+      bg_opa: COVER
+      border_color: 0x000000
+      border_width: 1
+      text_color: 0x808080
+      pressed:
+        bg_color: 0xC0C0C0
+        bg_grad_color: 0xC0C0C0
+        bg_opa: COVER
+      checked:
+        bg_color: 0x000000
+        bg_grad_color: 0x000000
+        bg_opa: COVER
+        text_color: 0x800080
+  pages:
+    - id: main_page
+      pad_all: 0
+      widgets:
+        - obj:
+            width: ${width}
+            height: ${height}
+            bg_color: room_bg_color
+            layout:
+              type: grid
+              grid_columns: [fr(1), fr(1), fr(1), fr(1)]
+              grid_rows: [fr(1), fr(1), fr(1)]
+            pad_all: 5px
+            outline_pad: 5px
+            widgets:
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget.yaml
+                  vars:
+                    id: btn_1
+                    col: 0
+                    row: 0
+                    color: btn_1_color
+                    icon: "\U000F1B94"
+                    font: roboto_16
+                    label: "Sleep"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget.yaml
+                  vars:
+                    id: btn_2
+                    col: 1
+                    row: 0
+                    color: btn_2_color
+                    icon: "\U000F0583"
+                    font: roboto_16
+                    label: "Outside"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_3
+                    col: 2
+                    row: 0
+                    color: 0xFFFF00
+                    icon: "\U000F059C"
+                    font: roboto_16
+                    label: "I'm wake"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_4
+                    col: 3
+                    row: 0
+                    color: 0x00FF00
+                    icon: "\U000F040E"
+                    font: roboto_16
+                    label: "Play/Pause"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget.yaml
+                  vars:
+                    id: btn_5
+                    col: 0
+                    row: 1
+                    color: btn_5_color
+                    icon: "\U000F032A"
+                    font: roboto_16
+                    label: "Back Garden"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget.yaml
+                  vars:
+                    id: btn_6
+                    col: 1
+                    row: 1
+                    color: btn_6_color
+                    icon: "\U000F024A"
+                    font: roboto_16
+                    label: "Studio Garden"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget.yaml
+                  vars:
+                    id: btn_7
+                    col: 2
+                    row: 1
+                    color: btn_7_color
+                    icon: "\U000F1846"
+                    font: roboto_16
+                    label: "Curtain 30%"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_8
+                    col: 3
+                    row: 1
+                    color: 0x00FFFF
+                    icon: "\U000F1847"
+                    font: roboto_16
+                    label: "Curtain"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_9
+                    col: 0
+                    row: 2
+                    color: 0x00FF00
+                    icon: "\U000F0402"
+                    font: roboto_16
+                    label: "Pill alert"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_10
+                    col: 1
+                    row: 2
+                    color: 0xFFFF00
+                    icon: "\U000F17C9"
+                    font: roboto_16
+                    label: "Studio"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_11
+                    col: 2
+                    row: 2
+                    color: 0xFFFF00
+                    icon: "\U000F17C9"
+                    font: roboto_16
+                    label: "Living"
+              - <<: !include
+                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                  vars:
+                    id: btn_12
+                    col: 3
+                    row: 2
+                    color: 0xFB852B
+                    icon: "\U000F1915"
+                    font: roboto_16
+                    label: "Eat"

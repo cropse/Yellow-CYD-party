@@ -1,0 +1,13 @@
+platform: lvgl
+widget: ${id}
+name: "${name}"
+id: ${id}_pressed
+on_click:
+  min_length: ${min_len | default("50ms")}
+  max_length: ${max_len | default("500ms")}
+  then:
+    - logger.log: "${log_msg}"
+    - homeassistant.action:
+        action: ${ha_action}
+        data:
+          ${ha_data | default("{}")}

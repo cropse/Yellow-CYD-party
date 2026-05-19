@@ -1,0 +1,24 @@
+button:
+  id: ${id}
+  grid_cell_column_pos: ${col}
+  grid_cell_row_pos: ${row}
+  grid_cell_x_align: STRETCH
+  grid_cell_y_align: STRETCH
+  bg_color: default_button_bg_color
+  pressed:
+    bg_color: default_button_pressed_bg_color
+  widgets:
+    - label:
+        id: lbl_${id}
+        text: "${icon}"
+        text_font: mdi_icons
+        text_color: ${color | default("default_button_text_color")}
+        align: center
+        y: ${icon_y | default("-8")}
+    - label:
+        id: lbl_text_${id}
+        text_font: ${font | default("roboto_12")}
+        text: "${label}"
+        text_color: ${color | default("default_button_text_color")}
+        align: center
+        y: ${label_y| default("20")}
