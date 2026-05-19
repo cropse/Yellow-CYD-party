@@ -327,7 +327,7 @@ export function generateLVGLWidgets(buttons, deps) {
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;
 
     const hasDualActions = btn.shortPress?.enabled && btn.longPress?.enabled;
-    const fontLine = btn.font !== 'roboto_12' ? `font: ${btn.font}\n                    ` : '';
+    const fontLine = btn.font !== 'roboto_12' ? `                     font: ${btn.font}\n` : '';
     if (isCheckable && !hasTimerDefaultLabel && !hasDualActions) {
       const colorValue = `0x${btn.color}`;
       widgets.push(`              - <<: !include
@@ -338,7 +338,7 @@ export function generateLVGLWidgets(buttons, deps) {
                      row: ${btn.row}
                      color: ${colorValue}
                      icon: ${yamlQuoted(btn.icon)}
-                    ${fontLine}label: ${yamlQuoted(btn.label)}`);
+${fontLine}                     label: ${yamlQuoted(btn.label)}`);
     } else {
       widgets.push(`              - <<: !include
                    file: cyd-lib/templates/cyd_button_widget.yaml
@@ -348,7 +348,7 @@ export function generateLVGLWidgets(buttons, deps) {
                      row: ${btn.row}
                      color: ${colorRef}
                      icon: ${yamlQuoted(btn.icon)}
-                    ${fontLine}label: ${yamlQuoted(btn.label)}`);
+${fontLine}                     label: ${yamlQuoted(btn.label)}`);
     }
   });
 
