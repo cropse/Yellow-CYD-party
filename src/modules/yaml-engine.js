@@ -156,27 +156,6 @@ export function generateFontSection(buttons, deps) {
       - "0123456789 /"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
-  - file:
-      path: \${font_directory}Arimo-Regular.ttf
-      type: local
-    id: arimo14
-    size: 14
-    bpp: 2
-    glyphs:
-      - "0123456789 "
-      - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      - "abcdefghijklmnopqrstuvwxyz"
-  - file:
-      type: gfonts
-      family: Roboto
-      weight: 800
-    id: roboto_16
-    bpp: 2
-    size: 16
-    glyphs:
-      - "0123456789 /"
-      - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      - "abcdefghijklmnopqrstuvwxyz"
   - file: \${font_directory}materialdesignicons-webfont.ttf
     id: mdi_icons
     size: 48
@@ -347,7 +326,8 @@ export function generateLVGLWidgets(buttons, deps) {
     const hasTimerDefaultLabel = isCheckable && btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim();
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;
 
-    if (isCheckable && !hasTimerDefaultLabel) {
+    const hasDualActions = btn.shortPress?.enabled && btn.longPress?.enabled;
+    if (isCheckable && !hasTimerDefaultLabel && !hasDualActions) {
       const colorValue = `0x${btn.color}`;
       widgets.push(`              - <<: !include
                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
