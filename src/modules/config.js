@@ -1,6 +1,15 @@
 // Configuration constants extracted from index.html
 // Generated on 2026-04-30
 
+    export const DEFAULT_LED = {
+      enabled: false,
+      effect: 'on-entity',
+      entity: '',
+      onState: '',
+      color: { r: 0, g: 255, b: 0 },
+      brightness: 100
+    };
+
     export const DEFAULT_BUTTON = {
       id: 'btn_1',
       name: 'Button 1',
@@ -16,7 +25,6 @@
       timerDefaultLabel: '',
       iconOn: null,
       iconOff: null,
-      ledControl: false,
       shortPress: {
         enabled: false,
         actionType: '',
@@ -38,6 +46,7 @@
       niceName: 'My CYD',
       displayTimeout: 600,
       apPassword: null, // Generated randomly on first YAML generation
+      led: structuredClone(DEFAULT_LED),
       buttons: Array(12).fill(null).map((_, i) => ({
         ...structuredClone(DEFAULT_BUTTON),
         id: `btn_${i + 1}`,
@@ -271,6 +280,7 @@
         deviceName: 'living-room-cyd',
         niceName: 'Living Room CYD',
         displayTimeout: 600,
+        led: { ...DEFAULT_LED, enabled: true },
         buttons: [
           { ...DEFAULT_BUTTON, id: 'btn_1', name: 'Button 1', label: 'Sleep', col: 0, row: 0, icon: '\\U000F1B94', color: 'FF0000', type: 'stateless', shortPress: { enabled: true, actionType: 'script', action: 'script.go_to_sleep', data: { action: 'script.go_to_sleep' } } },
           { ...DEFAULT_BUTTON, id: 'btn_2', name: 'Button 2', label: 'Outside', col: 1, row: 0, icon: '\\U000F0583', color: 'FF7F00', type: 'stateless', shortPress: { enabled: true, actionType: 'script', action: 'script.leave_home', data: { action: 'script.leave_home' } } },
@@ -290,16 +300,17 @@
         deviceName: 'back-garden-cyd',
         niceName: 'Back Garden CYD',
         displayTimeout: 600,
+        led: { ...DEFAULT_LED, enabled: true, entity: 'switch.virtual_pill_alert', onState: 'on' },
         buttons: [
           { ...DEFAULT_BUTTON, id: 'btn_1', name: 'Button 1', label: 'Sleep', col: 0, row: 0, icon: '\\U000F1B94', color: 'FF0000', font: 'roboto_16', type: 'stateless', longPress: { enabled: true, minLength: '1000ms', maxLength: '5000ms', actionType: 'script', action: 'script.go_to_sleep', data: { action: 'script.go_to_sleep' } } },
           { ...DEFAULT_BUTTON, id: 'btn_2', name: 'Button 2', label: 'Outside', col: 1, row: 0, icon: '\\U000F0583', color: 'FF7F00', font: 'roboto_16', type: 'stateless', longPress: { enabled: true, minLength: '1000ms', maxLength: '5000ms', actionType: 'script', action: 'script.leave_home', data: { action: 'script.leave_home' } } },
           { ...DEFAULT_BUTTON, id: 'btn_3', name: 'Button 3', label: "I'm wake", col: 2, row: 0, icon: '\\U000F059C', color: 'FFFF00', type: 'checkable', haEntity: 'switch.virtual_is_wake', onState: 'on', iconOn: '\\U000F059C', iconOff: '\\U000F0594', longPress: { enabled: true, minLength: '1000ms', maxLength: '5000ms', actionType: 'automation', action: '', data: { entityId: 'automation.i_m_wake' } } },
           { ...DEFAULT_BUTTON, id: 'btn_4', name: 'Button 4', label: 'Play/Pause', col: 3, row: 0, icon: '\\U000F040E', color: '00FF00', type: 'checkable', haEntity: 'media_player.spotify_mememe', onState: 'playing', iconOn: '\\U000F040A', iconOff: '\\U000F03E4', shortPress: { enabled: true, actionType: 'media_player', action: '', data: { targetType: 'device_id', deviceId: '31e23566034de0e54e242c1dc7c49534', operation: 'media_play_pause' } }, longPress: { enabled: true, minLength: '500ms', maxLength: '5000ms', actionType: 'media_player', action: '', data: { targetType: 'device_id', deviceId: '31e23566034de0e54e242c1dc7c49534', operation: 'media_next_track' } } },
           { ...DEFAULT_BUTTON, id: 'btn_5', name: 'Button 5', label: 'Back Garden', col: 0, row: 1, icon: '\\U000F032A', color: 'FF1493', type: 'stateless', shortPress: { enabled: true, actionType: 'switch', action: '', data: { entityId: 'switch.0xa4c138eaeaa49145_l1', operation: 'toggle' } } },
-          { ...DEFAULT_BUTTON, id: 'btn_6', name: 'Button 6', label: 'Studio Garden', col: 1, row: 1, icon: '\\U000F024A', color: '800080', type: 'checkable', haEntity: 'timer.studio_balcony_plant_light_timer', timerDefaultLabel: 'Studio Garden', shortPress: { enabled: true, actionType: 'script', action: 'script.watch_a_studio_plant', data: { action: 'script.watch_a_studio_plant' } } },
+          { ...DEFAULT_BUTTON, id: 'btn_6', name: 'Button 6', label: 'Studio Garden', col: 1, row: 1, icon: '\\U000F024A', color: '800080', type: 'timer_sync', haEntity: 'timer.studio_balcony_plant_light_timer', timerDefaultLabel: 'Studio Garden', shortPress: { enabled: true, actionType: 'script', action: 'script.watch_a_studio_plant', data: { action: 'script.watch_a_studio_plant' } } },
           { ...DEFAULT_BUTTON, id: 'btn_7', name: 'Button 7', label: 'Curtain 30%', col: 2, row: 1, icon: '\\U000F1846', color: '0000FF', type: 'stateless', shortPress: { enabled: true, actionType: 'cover', action: '', data: { deviceId: '1fa4679165a72e406c63bec6b74b7c63', operation: 'set_cover_position', position: 30 } } },
           { ...DEFAULT_BUTTON, id: 'btn_8', name: 'Button 8', label: 'Curtain', col: 3, row: 1, icon: '\\U000F1847', color: '00FFFF', type: 'checkable', haEntity: 'cover.sonoff_1000faa95f', onState: 'opening', iconOn: '\\U000F1846', iconOff: '\\U000F1847', shortPress: { enabled: true, actionType: 'cover', action: '', data: { entityId: 'cover.sonoff_1000faa95f', operation: 'open_cover' } }, longPress: { enabled: true, minLength: '500ms', maxLength: '10000ms', actionType: 'cover', action: '', data: { entityId: 'cover.sonoff_1000faa95f', operation: 'close_cover' } } },
-          { ...DEFAULT_BUTTON, id: 'btn_9', name: 'Button 9', label: 'Pill alert', col: 0, row: 2, icon: '\\U000F0402', color: '00FF00', type: 'checkable', haEntity: 'switch.virtual_pill_alert', onState: 'on', iconOn: '\\U000F0402', iconOff: '\\U000F1A5C', ledControl: true, shortPress: { enabled: true, actionType: 'switch', action: '', data: { entityId: 'switch.virtual_pill_alert', operation: 'turn_off' } } },
+          { ...DEFAULT_BUTTON, id: 'btn_9', name: 'Button 9', label: 'Pill alert', col: 0, row: 2, icon: '\\U000F0402', color: '00FF00', type: 'checkable', haEntity: 'switch.virtual_pill_alert', onState: 'on', iconOn: '\\U000F0402', iconOff: '\\U000F1A5C', shortPress: { enabled: true, actionType: 'switch', action: '', data: { entityId: 'switch.virtual_pill_alert', operation: 'turn_off' } } },
           { ...DEFAULT_BUTTON, id: 'btn_10', name: 'Button 10', label: 'Studio', col: 1, row: 2, icon: '\\U000F17C9', color: 'FFFF00', font: 'roboto_16', type: 'checkable', haEntity: 'switch.sonoff_10010ff64b_2', onState: 'on', iconOn: '\\U000F091D', iconOff: '\\U000F17C9', shortPress: { enabled: true, actionType: 'script', action: 'script.toggle_studio_room', data: { action: 'script.toggle_studio_room' } } },
           { ...DEFAULT_BUTTON, id: 'btn_11', name: 'Button 11', label: 'Living', col: 2, row: 2, icon: '\\U000F17C9', color: 'FFFF00', type: 'checkable', haEntity: 'switch.sonoff_10010ff602_2', onState: 'on', iconOn: '\\U000F091D', iconOff: '\\U000F17C9', shortPress: { enabled: true, actionType: 'script', action: 'script.toggle_living_room', data: { action: 'script.toggle_living_room' } } },
           { ...DEFAULT_BUTTON, id: 'btn_12', name: 'Button 12', label: 'Eat', col: 3, row: 2, icon: '\\U000F1915', color: 'FB852B', type: 'checkable', haEntity: 'switch.sonoff_1000f57db2_1', onState: 'on', iconOn: '\\U000F025A', iconOff: '\\U000F1915', shortPress: { enabled: true, actionType: 'script', action: 'script.toggle_eat_time', data: { action: 'script.toggle_eat_time' } } }
@@ -309,6 +320,7 @@
         deviceName: 'bedroom-cyd',
         niceName: 'Bedroom CYD',
         displayTimeout: 600,
+        led: structuredClone(DEFAULT_LED),
         buttons: [
           { ...DEFAULT_BUTTON, id: 'btn_1', name: 'Button 1', label: 'Sleep', col: 0, row: 0, icon: '\\U000F1B94', color: 'FF0000', type: 'stateless', shortPress: { enabled: true, actionType: 'script', action: 'script.good_night', data: { action: 'script.good_night' } } },
           { ...DEFAULT_BUTTON, id: 'btn_2', name: 'Button 2', label: 'Wake', col: 1, row: 0, icon: '\\U000F059C', color: 'FF7F00', type: 'stateless', shortPress: { enabled: true, actionType: 'script', action: 'script.good_morning', data: { action: 'script.good_morning' } } },

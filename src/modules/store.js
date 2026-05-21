@@ -1,6 +1,4 @@
-/**
- * State Store Module - Centralized state management with undo/redo
- */
+import { debounce } from './utils.js';
 
 export function createStore(options) {
   const {
@@ -21,6 +19,9 @@ export function createStore(options) {
   const undoStack = [];
   let redoStack = [];
 
+  // Debounce YAML generation & validation - these are expensive and run on every keystroke.
+  const scheduleExpensive = debounce(() => { generate(); validate(); }, 400);
+
   let effectsScheduled = false;
   function scheduleEffects() {
     if (effectsScheduled) return;
@@ -29,8 +30,8 @@ export function createStore(options) {
       effectsScheduled = false;
       save();
       render();
-      generate();
     });
+    scheduleExpensive();
   }
 
   function snapshot() {
@@ -49,6 +50,7 @@ export function createStore(options) {
         getState().buttons.length - 1
       ));
     }
+    scheduleExpensive.cancel();
     save();
     render();
     generate();

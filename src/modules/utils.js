@@ -102,3 +102,60 @@ export function escapeHTML(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// Debounce: delays execution until `wait` ms have passed since the last call.
+// Optionally flush on the first call (leading) and cancel prior pending invocations.
+export function debounce(fn, wait, opts = {}) {
+  const { leading = false, trailing = true } = opts;
+  let timer = null;
+  let lastArgs = null;
+  let lastThis = null;
+
+  function invoke() {
+    timer = null;
+    fn.apply(lastThis, lastArgs);
+    lastArgs = null;
+    lastThis = null;
+  }
+
+  function scheduled() {
+    if (leading && !timer) {
+      // Fire immediately on first call, then schedule trailing for latest args
+      fn.apply(this, arguments);
+      lastArgs = arguments;
+      lastThis = this;
+      timer = setTimeout(() => {
+        // If called again during the wait, fire the latest args
+        if (lastArgs) {
+          timer = null;
+          fn.apply(lastThis, lastArgs);
+          lastArgs = null;
+          lastThis = null;
+        } else {
+          timer = null;
+        }
+      }, wait);
+    } else if (trailing) {
+      lastArgs = arguments;
+      lastThis = this;
+      if (!timer) {
+        timer = setTimeout(invoke, wait);
+      } else {
+        // Reset the timer
+        clearTimeout(timer);
+        timer = setTimeout(invoke, wait);
+      }
+    }
+  }
+
+  scheduled.cancel = function() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    lastArgs = null;
+    lastThis = null;
+  };
+
+  return scheduled;
+}

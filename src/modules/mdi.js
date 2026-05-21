@@ -60,20 +60,50 @@ function populateMdiMap(data) {
   if (!Array.isArray(data)) return;
   mdiData.clear();
   data.forEach(icon => {
+    // Skip deprecated icons
+    if (icon.deprecated) return;
+
     const hex = normalizeIconCodepoint(icon.codepoint || icon.id);
     if (!hex) return;
 
     const unicode = 0xF0000 + parseInt(hex, 16);
     if (unicode > 0x10FFFF) return;
 
+    const tags = Array.isArray(icon.tags) ? icon.tags : [];
+
     mdiData.set(`\\U000F${hex}`, {
       name: icon.name,
       codepoint: `\\U000F${hex}`,
       char: String.fromCodePoint(unicode),
-      category: icon.category || 'other',
-      tags: icon.tags || []
+      categories: tags,
+      tags: tags
     });
   });
+}
+
+export function getMdiCategories() {
+  const cats = new Set();
+
+  for (const [, icon] of mdiData) {
+    for (const category of icon.categories || []) {
+      cats.add(category);
+    }
+  }
+
+  return [...cats].sort();
+}
+
+export function searchIconsByCategory(category, limit = 200) {
+  const results = [];
+
+  for (const [, icon] of mdiData) {
+    if ((icon.categories || []).includes(category)) {
+      results.push(icon);
+      if (results.length >= limit) break;
+    }
+  }
+
+  return results;
 }
 
 export function getIconByCodepoint(codepoint) {
@@ -99,4 +129,46 @@ export function searchIcons(query, limit = 200) {
   }
 
   return results;
+}
+
+// --- Recent icons ---
+const RECENT_KEY = 'cyd-recent-icons';
+const MAX_RECENT = 15;
+
+export function getRecentIcons() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY)) || [];
+  } catch { return []; }
+}
+
+export function addRecentIcon(codepoint) {
+  let recent = getRecentIcons();
+  recent = recent.filter(c => c !== codepoint);
+  recent.unshift(codepoint);
+  if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+}
+
+// --- Favorites ---
+const FAV_KEY = 'cyd-favorite-icons';
+
+export function getFavorites() {
+  try {
+    return JSON.parse(localStorage.getItem(FAV_KEY)) || [];
+  } catch { return []; }
+}
+
+export function toggleFavorite(codepoint) {
+  let favs = getFavorites();
+  if (favs.includes(codepoint)) {
+    favs = favs.filter(c => c !== codepoint);
+  } else {
+    favs.push(codepoint);
+  }
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+  return favs.includes(codepoint);
+}
+
+export function isFavorite(codepoint) {
+  return getFavorites().includes(codepoint);
 }

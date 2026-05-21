@@ -1,5 +1,30 @@
-import { DEFAULT_CONFIG, DEFAULT_BUTTON, ACTION_SCHEMAS } from './config.js';
+import { DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED, ACTION_SCHEMAS } from './config.js';
 import { normalizeColor, clampNumber, ensureUniquePositions, isPlainYAMLObject, sanitizeDeviceName, cleanYAMLValue, getYAMLSection, splitTopLevelListItems, parseYAMLKeyValue } from './utils.js';
+
+function normalizeLedColor(raw) {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_LED.color };
+  return {
+    r: Math.max(0, Math.min(255, Number(raw.r) || 0)),
+    g: Math.max(0, Math.min(255, Number(raw.g) || 255)),
+    b: Math.max(0, Math.min(255, Number(raw.b) || 0))
+  };
+}
+
+function normalizeLedConfig(source, fallback) {
+  if (typeof source === 'boolean') {
+    return { ...structuredClone(DEFAULT_LED), enabled: source };
+  }
+  if (!source || typeof source !== 'object') return structuredClone(fallback || DEFAULT_LED);
+  const fb = (typeof fallback === 'object' && fallback) ? fallback : DEFAULT_LED;
+  return {
+    enabled: Boolean(source.enabled),
+    effect: ['on-entity', 'blink', 'pulse', 'steady'].includes(source.effect) ? source.effect : fb.effect,
+    entity: String(source.entity || '').trim(),
+    onState: String(source.onState || '').trim(),
+    color: normalizeLedColor(source.color),
+    brightness: Math.max(0, Math.min(100, Number(source.brightness) || 100))
+  };
+}
 
 export function normalizeImportedConfig(rawConfig) {
   const warnings = [];
@@ -11,6 +36,7 @@ export function normalizeImportedConfig(rawConfig) {
     deviceName: sanitizeDeviceName(source.deviceName || DEFAULT_CONFIG.deviceName) || DEFAULT_CONFIG.deviceName,
     niceName: String(source.niceName || DEFAULT_CONFIG.niceName).trim() || DEFAULT_CONFIG.niceName,
     displayTimeout: clampNumber(source.displayTimeout, 90, 3600, DEFAULT_CONFIG.displayTimeout),
+    led: normalizeLedConfig(source.led),
     buttons: Array(12).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings))
   };
 
@@ -41,7 +67,6 @@ function normalizeButton(rawButton, index, warnings = []) {
     timerDefaultLabel: String(source.timerDefaultLabel || ''),
     iconOn: /^\\U000F[0-9A-Fa-f]{4}$/.test(String(source.iconOn || '')) ? source.iconOn.toUpperCase() : null,
     iconOff: /^\\U000F[0-9A-Fa-f]{4}$/.test(String(source.iconOff || '')) ? source.iconOff.toUpperCase() : null,
-    ledControl: Boolean(source.ledControl),
     shortPress: normalizePress(source.shortPress, fallback.shortPress),
     longPress: normalizePress(source.longPress, fallback.longPress, true),
     rawBlocks: Array.isArray(source.rawBlocks) ? source.rawBlocks : []
