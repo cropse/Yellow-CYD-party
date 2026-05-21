@@ -1,6 +1,201 @@
 // Configuration constants extracted from index.html
 // Generated on 2026-04-30
 
+    export const DEFAULT_BOARD_ID = 'esp32-2432s028-2port';
+
+    export const BOARD_CONFIGS = {
+  'esp32-2432s028-2port': {
+    id: 'esp32-2432s028-2port',
+    label: 'ESP32-2432S028-2port (320×240)',
+    width: 320,
+    height: 240,
+    capabilities: { rgbLed: true },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: {
+        driver: 'ili9xxx',
+        model: 'TFT 2.4R',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        dc_pin: { number: 2, ignore_strapping_warning: true },
+        invert_colors: false,
+        color_palette: '8BIT',
+        transform: { swap_xy: true }
+      },
+      touch: {
+        driver: 'xpt2046',
+        spi_id: 'touch',
+        cs_pin: 33,
+        interrupt_pin: 36,
+        threshold: 400,
+        calibration: { x_min: 280, x_max: 3860, y_min: 340, y_max: 3860 },
+        transform: { swap_xy: true }
+      },
+      backlight: { pin: 'GPIO21', frequency: '1000Hz' },
+      rgbLed: { redPin: 'GPIO4', greenPin: 'GPIO17', bluePin: 'GPIO16', inverted: true }
+    }
+  },
+  'esp32-e32r28t': {
+    id: 'esp32-e32r28t',
+    label: 'ESP32-E32R28T (320×240)',
+    width: 320,
+    height: 240,
+    capabilities: { rgbLed: false },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: {
+        driver: 'ili9341',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        dc_pin: { number: 2, ignore_strapping_warning: true },
+        invert_colors: false,
+        color_palette: '8BIT',
+        transform: { swap_xy: true }
+      },
+      touch: {
+        driver: 'xpt2046',
+        spi_id: 'touch',
+        cs_pin: 33,
+        interrupt_pin: 36,
+        threshold: 400,
+        calibration: { x_min: 280, x_max: 3860, y_min: 340, y_max: 3860 },
+        transform: { swap_xy: true }
+      },
+      backlight: { pin: 'GPIO21', frequency: '1000Hz' }
+    }
+  },
+  'esp32-3248s035c': {
+    id: 'esp32-3248s035c',
+    label: 'ESP32-3248S035C (480×320)',
+    width: 480,
+    height: 320,
+    capabilities: { rgbLed: true },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: {
+        driver: 'st7796',
+        color_order: 'BGR',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        dc_pin: { number: 2, ignore_strapping_warning: true },
+        invert_colors: false,
+        color_palette: '8BIT',
+        transform: { swap_xy: true }
+      },
+      touch: {
+        driver: 'xpt2046',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        interrupt_pin: 36,
+        threshold: 400,
+        calibration: { x_min: 200, x_max: 3900, y_min: 200, y_max: 3900 },
+        transform: { swap_xy: true, mirror_x: true }
+      },
+      backlight: { pin: 'GPIO27', frequency: '1000Hz' },
+      rgbLed: { redPin: 'GPIO22', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
+    }
+  },
+  'esp32-e32r35t': {
+    id: 'esp32-e32r35t',
+    label: 'ESP32-E32R35T (480×320)',
+    width: 480,
+    height: 320,
+    capabilities: { rgbLed: true },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: {
+        driver: 'st7796',
+        color_order: 'BGR',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        dc_pin: { number: 2, ignore_strapping_warning: true },
+        invert_colors: false,
+        color_palette: '8BIT',
+        transform: { swap_xy: true }
+      },
+      touch: {
+        driver: 'xpt2046',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        interrupt_pin: 36,
+        threshold: 400,
+        calibration: { x_min: 200, x_max: 3900, y_min: 200, y_max: 3900 },
+        transform: { swap_xy: true, mirror_x: true }
+      },
+      backlight: { pin: 'GPIO27', frequency: '1000Hz' },
+      rgbLed: { redPin: 'GPIO22', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
+    }
+  },
+  'esp32-e32r40t': {
+    id: 'esp32-e32r40t',
+    label: 'ESP32-E32R40T (480×320)',
+    width: 480,
+    height: 320,
+    capabilities: { rgbLed: true },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: {
+        driver: 'st7796',
+        color_order: 'BGR',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        dc_pin: { number: 2, ignore_strapping_warning: true },
+        invert_colors: false,
+        color_palette: '8BIT',
+        transform: { swap_xy: true }
+      },
+      touch: {
+        driver: 'xpt2046',
+        spi_id: 'tft',
+        cs_pin: { number: 15, ignore_strapping_warning: true },
+        interrupt_pin: 36,
+        threshold: 400,
+        calibration: { x_min: 200, x_max: 3900, y_min: 200, y_max: 3900 },
+        transform: { swap_xy: true, mirror_x: true }
+      },
+      backlight: { pin: 'GPIO27', frequency: '1000Hz' },
+      rgbLed: { redPin: 'GPIO22', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
+    }
+  },
+  'guition-jc4827543c': {
+    id: 'guition-jc4827543c',
+    label: 'Guition JC4827543C (480×272)',
+    width: 480,
+    height: 272,
+    capabilities: { rgbLed: false },
+    hardware: {
+      esp32: { board: 'esp32-s3-devkitc-1', framework: 'esp-idf', psram: 'octal 80MHz' },
+      display: {
+        driver: 'nv3041a',
+        qspi: { clk: 'GPIO47', d0: 'GPIO21', d1: 'GPIO48', d2: 'GPIO40', d3: 'GPIO39', cs: 'GPIO45' },
+        invert_colors: true
+      },
+      touch: {
+        driver: 'gt911',
+        i2c: { sda: 'GPIO8', scl: 'GPIO4', interrupt: 'GPIO3', reset: 'GPIO38' },
+        transform: { mirror_x: true, mirror_y: true }
+      },
+      backlight: { pin: 'GPIO1', frequency: '1000Hz' }
+    }
+  }
+};
+
+    export const BOARD_OPTIONS = Object.values(BOARD_CONFIGS).map(b => ({ id: b.id, label: b.label }));
+
+    export function getBoardConfig(boardId) {
+      if (!boardId) return null;
+      return BOARD_CONFIGS[boardId] || null;
+    }
+
+    export function isSupportedBoard(boardId) {
+      if (!boardId) return false;
+      return boardId in BOARD_CONFIGS;
+    }
+
+    export function getDefaultBoardConfig() {
+      return { ...BOARD_CONFIGS[DEFAULT_BOARD_ID] };
+    }
+
     export const DEFAULT_LED = {
       enabled: false,
       effect: 'on-entity',
@@ -44,6 +239,7 @@
     export const DEFAULT_CONFIG = {
       deviceName: 'my-cyd',
       niceName: 'My CYD',
+      board: DEFAULT_BOARD_ID,
       displayTimeout: 600,
       apPassword: null, // Generated randomly on first YAML generation
       led: structuredClone(DEFAULT_LED),
@@ -299,6 +495,7 @@
       'back-garden': () => ({
         deviceName: 'back-garden-cyd',
         niceName: 'Back Garden CYD',
+        board: DEFAULT_BOARD_ID,
         displayTimeout: 600,
         led: { ...DEFAULT_LED, enabled: true, entity: 'switch.virtual_pill_alert', onState: 'on' },
         buttons: [

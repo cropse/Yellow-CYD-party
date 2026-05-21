@@ -1,0 +1,26 @@
+VERDICT: APPROVE
+
+Browser QA: PASS
+  - #board-select exists with 6 options (ESP32-2432S028-2port, ESP32-E32R28T, ESP32-3248S035C, ESP32-E32R35T, ESP32-E32R40T, Guition JC4827543C)
+  - Default selection: esp32-2432s028-2port
+  - Guition board: #rgb-led-controls hidden (display:none), YAML shows esp32-s3-devkit, esp-idf, psram, gt911, width 480, height 272, NO output_red
+  - esp32-e32r28t: #rgb-led-controls hidden, YAML shows width 320, height 240, NO output_red
+  - esp32-3248s035c: #rgb-led-controls visible (display:block), YAML shows width 480, height 320, HAS output_red
+  - Switch back to default: #rgb-led-controls visible, YAML shows width 320, height 240, HAS output_red
+  - No console errors during any board switching
+
+New tests: 142/142 pass
+  - test-board-registry.js: 24/24 pass
+  - test-yaml-board-generation.js: 43/43 pass
+  - test-import-export-board.js: 12/12 pass
+  - test-validation-board.mjs: 15/15 pass
+  - test-preview-fix.js: 48/48 pass
+
+Build: PASS (npm run build succeeded cleanly, 799ms)
+
+Pre-existing failures (no new regressions):
+  - test-yaml.js: 13 failures in generatePackages suite ("buttons.forEach is not a function") — known, unrelated to board feature
+  - verify-cyd.mjs: 1 failure — "generated YAML missing led_sync global LED control" — known pre-existing led_sync failure
+  - ci/test-cyd-integration.cjs: 2 failures (T16, T21) — known pre-existing integration failures
+
+Evidence captured: 2026-05-22

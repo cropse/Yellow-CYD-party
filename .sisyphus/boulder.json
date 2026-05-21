@@ -1,0 +1,106 @@
+{
+  "active_plan": "/mnt/c/Users/MEMEME/Documents/Project/Yellow-CYD-party/.sisyphus/plans/board-selection-feature.md",
+  "started_at": "2026-05-21T14:49:20.295Z",
+  "session_ids": [
+    "ses_1b4fcd18cffeFtjQpoj0SYxex9",
+    "ses_1b4fb608effe7hb951irsbAxD7"
+  ],
+  "session_origins": {
+    "ses_1b4fcd18cffeFtjQpoj0SYxex9": "direct",
+    "ses_1b4fb608effe7hb951irsbAxD7": "appended"
+  },
+  "plan_name": "board-selection-feature",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Add board registry tests and registry implementation",
+      "session_id": "ses_1b4fa0622ffebtdMIzs6nv0w1R",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-21T15:07:18.991Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "Add YAML board-generation TDD coverage",
+      "session_id": "ses_1b4e8eaf9ffecA7lEbjP5iBSWj",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-21T15:20:40.358Z"
+    },
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "Implement board-specific hardware YAML generation",
+      "session_id": "ses_1b4ddc6f7ffeP5ySAoCokVFPnD",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-05-21T15:26:55.668Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "Implement board state, import/export, and validation",
+      "session_id": "ses_1b4d92229ffe4I6nP557B0bDvp",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-21T15:37:09.000Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Implement Global Settings board selector UI",
+      "session_id": "ses_1b4ccc035ffesM8sGldPfhaxrz",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-05-21T15:44:47.190Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "Implement board-driven LVGL scaling",
+      "session_id": "ses_1b4c7d393ffePcrL6OUvzZZKYL",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-05-21T15:48:49.653Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Update integration verification and regression commands",
+      "session_id": "ses_1b4c5712cffeXoCLVEKMq8gk01",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-21T15:54:45.391Z"
+    },
+    "todo:11": {
+      "task_key": "todo:11",
+      "task_label": "11",
+      "task_title": "Update user-facing docs and labels",
+      "session_id": "ses_1b4c04270ffeTEU7hRptkTP53N",
+      "agent": "Sisyphus-Junior",
+      "category": "writing",
+      "updated_at": "2026-05-21T15:56:39.769Z"
+    },
+    "todo:12": {
+      "task_key": "todo:12",
+      "task_label": "12",
+      "task_title": "Final implementation cleanup and default regression review",
+      "session_id": "ses_1b4b8dfe8ffeVh7HFir0XZMauk",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-21T16:05:51.385Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Plan Compliance Audit — oracle",
+      "session_id": "ses_1b4a42da7ffePkEL5J5Wv3SrDo",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-05-21T16:28:34.663Z"
+    }
+  }
+}

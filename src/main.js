@@ -1,5 +1,5 @@
 import './styles/main.css';
-import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHES, DEFAULT_BUTTON, DEFAULT_LED } from './modules/config.js';
+import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHES, DEFAULT_BUTTON, DEFAULT_LED, BOARD_OPTIONS, DEFAULT_BOARD_ID, getBoardConfig, isSupportedBoard } from './modules/config.js';
 import { createStore } from './modules/store.js';
 import * as YamlGenerationEngine from './modules/yaml-engine.js';
 import * as ValidationEngine from './modules/validation-engine.js';
@@ -171,6 +171,7 @@ async function init() {
 
   renderColorThemePresets();
   renderColorSwatches();
+  populateBoardSelector();
   renderGridPreview();
   renderEditorPanel();
   updateGlobalSettings();
@@ -518,12 +519,38 @@ function updateIconPreview(target, iconCode) {
   if (codeEl) codeEl.textContent = iconData?.codepoint || (iconCode || '');
 }
 
+function populateBoardSelector() {
+  const select = document.getElementById('board-select');
+  if (!select) return;
+
+  select.innerHTML = BOARD_OPTIONS.map(opt =>
+    `<option value="${escapeHTML(opt.id)}">${escapeHTML(opt.label)}</option>`
+  ).join('');
+  select.value = appState.board || DEFAULT_BOARD_ID;
+}
+
+function updateLEDCompatibility() {
+  const boardConfig = getBoardConfig(appState.board || DEFAULT_BOARD_ID);
+  const hasRgb = boardConfig?.capabilities?.rgbLed === true;
+  const rgbSection = document.getElementById('rgb-led-controls') || document.querySelector('[data-rgb-led]');
+  if (!rgbSection) return;
+
+  rgbSection.classList.toggle('hidden', !hasRgb);
+  rgbSection.setAttribute('aria-hidden', hasRgb ? 'false' : 'true');
+  rgbSection.querySelectorAll('input, select, button, textarea').forEach(control => {
+    control.disabled = !hasRgb;
+  });
+}
+
 function updateGlobalSettings() {
   document.getElementById('device-name').value = appState.deviceName || '';
   document.getElementById('nice-name').value = appState.niceName || '';
   document.getElementById('display-timeout').value = appState.displayTimeout || 600;
+  const boardSelect = document.getElementById('board-select');
+  if (boardSelect) boardSelect.value = appState.board || DEFAULT_BOARD_ID;
   document.getElementById('device-name-hint').textContent = appState.deviceName ? `hostname: ${appState.deviceName}` : '';
   renderLedControl();
+  updateLEDCompatibility();
 }
 
 function generateYAML() {
@@ -546,6 +573,9 @@ function generateYAML() {
       hardwareConfig: HARDWARE_CONFIG,
       defaultButton: DEFAULT_BUTTON,
       defaultConfig: DEFAULT_CONFIG,
+      BOARD_OPTIONS,
+      DEFAULT_BOARD_ID,
+      getBoardConfig,
       normalizeColor,
       clampNumber,
       normalizeImportedConfig
@@ -713,6 +743,10 @@ function setupGlobalSettings() {
     const timeout = Math.max(90, Math.min(3600, parseInt(e.target.value, 10) || 600));
     store.update('Change display timeout', state => { state.displayTimeout = timeout; });
   });
+
+  document.getElementById('board-select')?.addEventListener('change', (e) => {
+    store.update('Change board', state => { state.board = e.target.value || DEFAULT_BOARD_ID; });
+  });
 }
 
 function setupPresets() {
@@ -723,8 +757,10 @@ function setupPresets() {
         store.update(`Load ${preset} preset`, state => {
           const newConfig = PRESETS[preset]();
           Object.assign(state, newConfig);
+          state.board = newConfig.board || DEFAULT_BOARD_ID;
         });
         renderLedControl();
+        updateLEDCompatibility();
       }
     });
   });
@@ -1204,6 +1240,7 @@ function importConfig(file) {
       const { config, warnings } = normalizeImportedConfig(raw);
       store.update('Import config', state => {
         Object.assign(state, config);
+        state.board = config.board || DEFAULT_BOARD_ID;
       }, { skipUndo: true });
       if (warnings.length) {
         console.log('Import warnings:', warnings);
@@ -1288,6 +1325,9 @@ window.ACTION_SCHEMAS = ACTION_SCHEMAS;
 window.HARDWARE_CONFIG = HARDWARE_CONFIG;
 window.COLOR_SWATCHES = COLOR_SWATCHES;
 window.COLOR_THEMES = COLOR_THEMES;
+window.BOARD_OPTIONS = BOARD_OPTIONS;
+window.DEFAULT_BOARD_ID = DEFAULT_BOARD_ID;
+window.isSupportedBoard = isSupportedBoard;
 window.store = store;
 window.YamlGenerationEngine = YamlGenerationEngine;
 window.ValidationEngine = ValidationEngine;

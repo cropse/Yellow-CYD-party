@@ -105,16 +105,318 @@ export function generateRandomPassword(length = 12) {
   return password;
 }
 
+const FALLBACK_DEFAULT_BOARD_ID = 'esp32-2432s028-2port';
+
+const FALLBACK_BOARD_CONFIGS = {
+  'esp32-2432s028-2port': {
+    id: 'esp32-2432s028-2port',
+    width: 320,
+    height: 240,
+    capabilities: { rgbLed: true },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: { driver: 'ili9xxx', model: 'TFT 2.4R', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, dc_pin: { number: 2, ignore_strapping_warning: true }, invert_colors: false, color_palette: '8BIT', transform: { swap_xy: true } },
+      touch: { driver: 'xpt2046', spi_id: 'touch', cs_pin: 33, interrupt_pin: 36, threshold: 400, calibration: { x_min: 280, x_max: 3860, y_min: 340, y_max: 3860 }, transform: { swap_xy: true } },
+      backlight: { pin: 'GPIO21' },
+      rgbLed: { redPin: 'GPIO4', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
+    }
+  },
+  'esp32-e32r28t': {
+    id: 'esp32-e32r28t',
+    width: 320,
+    height: 240,
+    capabilities: { rgbLed: false },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: { driver: 'ili9341', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, dc_pin: { number: 2, ignore_strapping_warning: true }, invert_colors: false, color_palette: '8BIT', transform: { swap_xy: true } },
+      touch: { driver: 'xpt2046', spi_id: 'touch', cs_pin: 33, interrupt_pin: 36, threshold: 400, calibration: { x_min: 280, x_max: 3860, y_min: 340, y_max: 3860 }, transform: { swap_xy: true } },
+      backlight: { pin: 'GPIO21' }
+    }
+  },
+  'esp32-3248s035c': {
+    id: 'esp32-3248s035c',
+    width: 480,
+    height: 320,
+    capabilities: { rgbLed: true },
+    hardware: {
+      esp32: { board: 'esp32dev', framework: 'arduino' },
+      display: { driver: 'st7796', color_order: 'BGR', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, dc_pin: { number: 2, ignore_strapping_warning: true }, invert_colors: false, color_palette: '8BIT', transform: { swap_xy: true } },
+      touch: { driver: 'xpt2046', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, interrupt_pin: 36, threshold: 400, calibration: { x_min: 200, x_max: 3900, y_min: 200, y_max: 3900 }, transform: { swap_xy: true, mirror_x: true } },
+      backlight: { pin: 'GPIO27' },
+      rgbLed: { redPin: 'GPIO22', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
+    }
+  },
+  'esp32-e32r35t': null,
+  'esp32-e32r40t': null,
+  'guition-jc4827543c': {
+    id: 'guition-jc4827543c',
+    width: 480,
+    height: 272,
+    capabilities: { rgbLed: false },
+    hardware: {
+      esp32: { board: 'esp32-s3-devkitc-1', framework: 'esp-idf', psram: 'octal 80MHz' },
+      display: { driver: 'nv3041a', qspi: { clk: 'GPIO47', d0: 'GPIO21', d1: 'GPIO48', d2: 'GPIO40', d3: 'GPIO39', cs: 'GPIO45' }, invert_colors: true },
+      touch: { driver: 'gt911', i2c: { sda: 'GPIO8', scl: 'GPIO4', interrupt: 'GPIO3', reset: 'GPIO38' }, transform: { mirror_x: true, mirror_y: true } },
+      backlight: { pin: 'GPIO1' }
+    }
+  }
+};
+FALLBACK_BOARD_CONFIGS['esp32-e32r35t'] = { ...FALLBACK_BOARD_CONFIGS['esp32-3248s035c'], id: 'esp32-e32r35t' };
+FALLBACK_BOARD_CONFIGS['esp32-e32r40t'] = { ...FALLBACK_BOARD_CONFIGS['esp32-3248s035c'], id: 'esp32-e32r40t' };
+
+function resolveBoardConfig(config, deps) {
+  const defaultBoardId = deps.DEFAULT_BOARD_ID || deps.defaultBoardId || FALLBACK_DEFAULT_BOARD_ID;
+  const requestedBoard = config?.board;
+  const hasBoard = typeof requestedBoard === 'string' && requestedBoard.trim();
+  const isSupported = deps.isSupportedBoard || ((id) => id in (deps.BOARD_CONFIGS || FALLBACK_BOARD_CONFIGS));
+  const boardId = hasBoard && isSupported(requestedBoard) ? requestedBoard : defaultBoardId;
+  const getBoardConfig = deps.getBoardConfig || ((id) => (deps.BOARD_CONFIGS || FALLBACK_BOARD_CONFIGS)[id] || null);
+  return getBoardConfig(boardId) || getBoardConfig(defaultBoardId) || FALLBACK_BOARD_CONFIGS[FALLBACK_DEFAULT_BOARD_ID];
+}
+
 export function generateSubstitutions(config, deps) {
   const { yamlScalar, yamlQuoted } = deps;
+  const boardConfig = deps.boardConfig || resolveBoardConfig(config, deps);
 
   return `substitutions:
   font_directory: cyd-lib/fonts/
-  width: "320"
-  height: "240"
+  width: "${boardConfig.width}"
+  height: "${boardConfig.height}"
   device_name: ${yamlScalar(config.deviceName)}
   nice_name: ${yamlQuoted(config.niceName)}
   ap_password: "${config.apPassword}"`;
+}
+
+function pinValue(pin) {
+  if (typeof pin === 'string') return pin.replace(/^GPIO/i, '');
+  return pin;
+}
+
+function pinBlock(pin, indent = 4) {
+  const spaces = ' '.repeat(indent);
+  if (pin && typeof pin === 'object') {
+    const lines = [`${spaces}number: ${pinValue(pin.number)}`];
+    if (pin.ignore_strapping_warning) lines.push(`${spaces}ignore_strapping_warning: true`);
+    return lines.join('\n');
+  }
+  return `${spaces}${pinValue(pin)}`;
+}
+
+function generateCoreHardwareConfig(esp32) {
+  const psram = esp32.psram ? `\n\npsram:\n  mode: ${esp32.psram.split(' ')[0]}\n  speed: ${esp32.psram.split(' ')[1] || '80MHz'}` : '';
+  return `esp32:
+  board: ${esp32.board}
+  framework:
+    type: ${esp32.framework}${psram}
+
+esphome:
+  name: \${device_name}
+  friendly_name: \${nice_name}
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "\${nice_name} Fallback Hotspot"
+    password: "\${ap_password}"
+
+logger:
+
+time:
+  - platform: sntp
+    id: esptime
+
+captive_portal:`;
+}
+
+function generateRgbOutputs(rgbLed) {
+  if (!rgbLed) return '';
+  const inverted = rgbLed.inverted ? '\n    inverted: true' : '';
+  return `
+  - id: output_red
+    platform: ledc
+    pin: ${pinValue(rgbLed.redPin)}${inverted}
+  - id: output_green
+    platform: ledc
+    pin: ${pinValue(rgbLed.greenPin)}${inverted}
+  - id: output_blue
+    platform: ledc
+    pin: ${pinValue(rgbLed.bluePin)}${inverted}`;
+}
+
+function generateLightSection(includeRgb) {
+  const rgbLight = includeRgb ? `
+  - id: led
+    platform: rgb
+    red: output_red
+    green: output_green
+    blue: output_blue
+    restore_mode: ALWAYS_OFF` : '';
+  return `light:
+  - id: display_backlight
+    platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    restore_mode: ALWAYS_ON${rgbLight}`;
+}
+
+function generateCydHardwareConfig(boardConfig) {
+  const hardware = boardConfig.hardware;
+  const display = hardware.display;
+  const touch = hardware.touch;
+  const includeRgb = boardConfig.capabilities?.rgbLed === true;
+  const displayModel = display.model ? `
+    model: ${display.model}` : '';
+  const colorOrder = display.color_order ? `
+    color_order: ${display.color_order}` : '';
+  const touchTransform = Object.entries(touch.transform || {}).map(([key, value]) => `      ${key}: ${value}`).join('\n');
+  const spiSection = touch.spi_id === 'tft' ? `spi:
+  - id: tft
+    clk_pin: 14
+    mosi_pin: 13
+    miso_pin:
+      number: 12
+      ignore_strapping_warning: true` : `i2c:
+  - sda: 27
+    scl: 22
+    scan: true
+
+spi:
+  - id: tft
+    clk_pin: 14
+    mosi_pin: 13
+    miso_pin:
+      number: 12
+      ignore_strapping_warning: true
+  - id: touch
+    clk_pin: 25
+    mosi_pin: 32
+    miso_pin: 39`;
+
+  return `${generateCoreHardwareConfig(hardware.esp32)}
+
+${spiSection}
+
+output:
+  - id: backlight_pwm
+    platform: ledc
+    pin: ${pinValue(hardware.backlight.pin)}${generateRgbOutputs(includeRgb ? hardware.rgbLed : null)}
+
+${generateLightSection(includeRgb)}
+
+display:
+  - id: main_display
+    platform: ${display.driver}${displayModel}${colorOrder}
+    spi_id: ${display.spi_id}
+    cs_pin:
+${pinBlock(display.cs_pin, 6)}
+    dc_pin:
+${pinBlock(display.dc_pin, 6)}
+    invert_colors: ${display.invert_colors}
+    color_palette: ${display.color_palette}
+    update_interval: never
+    auto_clear_enabled: false
+    transform:
+      swap_xy: ${display.transform?.swap_xy === true}
+    dimensions:
+      width: \${width}
+      height: \${height}
+
+touchscreen:
+  - id: main_touchscreen
+    platform: ${touch.driver}
+    spi_id: ${touch.spi_id}
+    cs_pin:${touch.cs_pin && typeof touch.cs_pin === 'object' ? `\n${pinBlock(touch.cs_pin, 6)}` : ` ${pinValue(touch.cs_pin)}`}
+    interrupt_pin: ${pinValue(touch.interrupt_pin)}
+    threshold: ${touch.threshold}
+    calibration:
+      x_min: ${touch.calibration.x_min}
+      x_max: ${touch.calibration.x_max}
+      y_min: ${touch.calibration.y_min}
+      y_max: ${touch.calibration.y_max}
+    transform:
+${touchTransform}
+    on_release:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: display_backlight`;
+}
+
+function generateGuitionHardwareConfig(boardConfig) {
+  const hardware = boardConfig.hardware;
+  const qspi = hardware.display.qspi;
+  const touch = hardware.touch;
+  return `${generateCoreHardwareConfig(hardware.esp32)}
+
+i2c:
+  - sda: ${pinValue(touch.i2c.sda)}
+    scl: ${pinValue(touch.i2c.scl)}
+    scan: true
+
+output:
+  - id: backlight_pwm
+    platform: ledc
+    pin: ${pinValue(hardware.backlight.pin)}
+
+${generateLightSection(false)}
+
+display:
+  - id: main_display
+    platform: ${hardware.display.driver}
+    reset_pin: GPIO48
+    enable_pin: GPIO45
+    invert_colors: ${hardware.display.invert_colors}
+    update_interval: never
+    auto_clear_enabled: false
+    dimensions:
+      width: \${width}
+      height: \${height}
+    transform:
+      mirror_x: true
+    quad_spi:
+      clk_pin: ${qspi.clk}
+      data_pins:
+        - ${qspi.d0}
+        - ${qspi.d1}
+        - ${qspi.d2}
+        - ${qspi.d3}
+      cs_pin: ${qspi.cs}
+
+touchscreen:
+  - id: main_touchscreen
+    platform: gt911
+    interrupt_pin: ${touch.i2c.interrupt}
+    reset_pin: ${touch.i2c.reset}
+    transform:
+      mirror_x: ${touch.transform?.mirror_x === true}
+      mirror_y: ${touch.transform?.mirror_y === true}
+    on_release:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - logger.log: "LVGL resuming"
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on: display_backlight`;
+}
+
+export function generateHardwareConfig(boardConfig, config, deps) {
+  if (!boardConfig?.hardware) return deps.hardwareConfig || '';
+  if (boardConfig.id === 'esp32-2432s028-2port' && deps.hardwareConfig) return deps.hardwareConfig;
+  if (boardConfig.hardware.display?.qspi || boardConfig.hardware.touch?.driver === 'gt911') return generateGuitionHardwareConfig(boardConfig);
+  return generateCydHardwareConfig(boardConfig);
 }
 
 export function generateFontSection(buttons, deps) {
@@ -356,8 +658,23 @@ ${fontLine}                     label: ${yamlQuoted(btn.label)}`);
   return widgets.join('\n');
 }
 
+function calculateLVGLLayoutScale(boardConfig) {
+  const width = Number(boardConfig?.width) || 320;
+  const height = Number(boardConfig?.height) || 240;
+  const scale = Math.min(width / 320, height / 240);
+  const gap = Math.max(4, Math.round(scale * 4));
+
+  return {
+    gap,
+    outerMargin: gap,
+    cellWidth: Math.floor((width - gap * 2 - gap * 3) / 4),
+    cellHeight: Math.floor((height - gap * 2 - gap * 2) / 3)
+  };
+}
+
 export function generateLVGLSection(buttons, deps) {
   const widgets = generateLVGLWidgets(buttons, deps);
+  const { outerMargin } = calculateLVGLLayoutScale(deps.boardConfig);
 
   return `lvgl:
   on_idle:
@@ -398,8 +715,8 @@ export function generateLVGLSection(buttons, deps) {
               type: grid
               grid_columns: [fr(1), fr(1), fr(1), fr(1)]
               grid_rows: [fr(1), fr(1), fr(1)]
-            pad_all: 5px
-            outline_pad: 5px
+            pad_all: ${outerMargin}px
+            outline_pad: ${outerMargin}px
             widgets:
 ${widgets}`;
 }
@@ -407,16 +724,20 @@ ${widgets}`;
 export function generateFullYAML(config, deps) {
   const { normalizeImportedConfig, hardwareConfig } = deps;
   const { config: normalizedConfig } = normalizeImportedConfig(config);
+  const boardConfig = (config?.board || deps.getBoardConfig || deps.isSupportedBoard || deps.BOARD_CONFIGS)
+    ? resolveBoardConfig(config, deps)
+    : null;
 
   const sectionDeps = {
     ...deps,
     yamlScalar,
-    yamlQuoted
+    yamlQuoted,
+    boardConfig
   };
 
   const parts = [
     generateSubstitutions(normalizedConfig, sectionDeps),
-    hardwareConfig,
+    boardConfig ? generateHardwareConfig(boardConfig, normalizedConfig, sectionDeps) : hardwareConfig,
     generateFontSection(normalizedConfig.buttons, sectionDeps),
     generateColorSection(normalizedConfig.buttons, sectionDeps),
     generateNumberSection(normalizedConfig, sectionDeps),

@@ -53,6 +53,10 @@
             <input type="text" class="form-control" id="nice-name" placeholder="My CYD" maxlength="64">
           </div>
           <div class="form-group">
+            <label for="board-select">Board</label>
+            <select id="board-select" class="form-control"></select>
+          </div>
+          <div class="form-group">
             <label for="display-timeout">Display Timeout (seconds)</label>
             <input type="number" class="form-control" id="display-timeout" min="90" max="3600" value="600">
           </div>
@@ -67,7 +71,7 @@
             <button type="button" class="btn btn-sm preset-btn" data-preset="bedroom">Bedroom</button>
           </div>
         </div>
-        <div class="led-widget-group">
+        <div class="led-widget-group" id="rgb-led-controls" data-rgb-led>
           <div class="led-section-label">Device Hardware</div>
           <style>
   .led-widget {

@@ -126,6 +126,69 @@ if (issues.errors.length) {
   throw new Error('validation errors: ' + issues.errors.map(e => e.message).join(' | '));
 }
 
+// Test board registry exports
+if (!win.DEFAULT_BOARD_ID) {
+  throw new Error('DEFAULT_BOARD_ID not exported to window');
+}
+if (win.DEFAULT_BOARD_ID !== 'esp32-2432s028-2port') {
+  throw new Error('DEFAULT_BOARD_ID should be esp32-2432s028-2port (got ' + win.DEFAULT_BOARD_ID + ')');
+}
+
+if (!win.BOARD_OPTIONS || !Array.isArray(win.BOARD_OPTIONS)) {
+  throw new Error('BOARD_OPTIONS not exported to window');
+}
+if (win.BOARD_OPTIONS.length !== 6) {
+  throw new Error('BOARD_OPTIONS should have 6 entries (got ' + win.BOARD_OPTIONS.length + ')');
+}
+
+if (!win.isSupportedBoard) {
+  throw new Error('isSupportedBoard not exported to window');
+}
+if (!win.isSupportedBoard('esp32-2432s028-2port')) {
+  throw new Error('isSupportedBoard should return true for default board');
+}
+if (win.isSupportedBoard('unknown-board')) {
+  throw new Error('isSupportedBoard should return false for unknown board');
+}
+
+// Test board-aware YAML generation for default board
+const defaultYaml = win.generateFullYAML(preset);
+if (!defaultYaml.includes('board: esp32dev')) {
+  throw new Error('default board YAML missing board: esp32dev');
+}
+if (!defaultYaml.includes('width: "320"')) {
+  throw new Error('default board YAML missing width: "320" in substitutions');
+}
+if (!defaultYaml.includes('height: "240"')) {
+  throw new Error('default board YAML missing height: "240" in substitutions');
+}
+
+// Test board-aware YAML generation for non-default board (Guition)
+const guitionPreset = { ...preset, board: 'guition-jc4827543c' };
+const guitionYaml = win.generateFullYAML(guitionPreset);
+if (!guitionYaml.includes('board: esp32-s3-devkitc-1')) {
+  throw new Error('Guition board YAML missing board: esp32-s3-devkitc-1');
+}
+if (!guitionYaml.includes('width: "480"')) {
+  throw new Error('Guition board YAML missing width: "480" in substitutions');
+}
+if (!guitionYaml.includes('height: "272"')) {
+  throw new Error('Guition board YAML missing height: "272" in substitutions');
+}
+if (!guitionYaml.includes('gt911') && !guitionYaml.includes('GT911')) {
+  throw new Error('Guition board YAML missing GT911 touch driver');
+}
+if (guitionYaml.includes('platform: rgb') || guitionYaml.includes('output_red')) {
+  throw new Error('Guition board YAML should NOT contain RGB LED sections');
+}
+
+// Test no-RGB board (esp32-e32r28t) omits RGB outputs
+const noRgbPreset = { ...preset, board: 'esp32-e32r28t' };
+const noRgbYaml = win.generateFullYAML(noRgbPreset);
+if (noRgbYaml.includes('output_red') || noRgbYaml.includes('platform: rgb')) {
+  throw new Error('no-RGB board YAML should NOT contain RGB LED sections');
+}
+
 // Test Back Garden global LED control
 if (!preset.led) {
   throw new Error('back-garden preset missing global led config');

@@ -1,3 +1,5 @@
+import { isSupportedBoard } from './config.js';
+
 /**
  * Validation Engine - Pure validation logic for CYD configurations.
  *
@@ -33,6 +35,15 @@ export function validateConfig(config, deps = {}) {
 
   if (!String(config.niceName || '').trim()) {
     issues.errors.push({ message: 'Friendly name is required.', selector: '#nice-name' });
+  }
+
+  if (typeof config.board === 'string' && config.board.trim()) {
+    if (!isSupportedBoard(config.board)) {
+      issues.errors.push({
+        message: `Board "${config.board}" is not supported. Choose from: esp32-2432s028-2port, esp32-e32r28t, esp32-3248s035c, esp32-e32r35t, esp32-e32r40t, guition-jc4827543c.`,
+        selector: '#board-select'
+      });
+    }
   }
 
   const timeout = parseInt(config.displayTimeout, 10);

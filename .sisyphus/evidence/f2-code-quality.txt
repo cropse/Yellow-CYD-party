@@ -1,0 +1,145 @@
+================================================================================
+F2 Code Quality Review — Board Selection Feature
+================================================================================
+Date: 2026-05-22
+Scope: src/modules/config.js, src/modules/yaml-engine.js, src/modules/import.js,
+       src/modules/validation-engine.js, src/main.js, index.html
+================================================================================
+
+BUILD & TEST RESULTS
+--------------------
+- npm run build: PASS (12 modules transformed, 856ms)
+- npm run test: FAIL at verify-cyd.mjs:229 — pre-existing led_sync issue
+  (This failure is documented as NOT the concern of this review per task notes.)
+- No board-selection-related regressions detected.
+
+TODO/FIXME/HACK SCAN
+--------------------
+- grep across src/ and index.html: ZERO matches for TODO, FIXME, HACK, XXX, TEMP
+- Clean codebase — no marker comments in new or modified code.
+
+NAMING CONSISTENCY
+------------------
+- DEFAULT_BOARD_ID, BOARD_CONFIGS, BOARD_OPTIONS: UPPER_SNAKE_CASE for constants ✓
+- getBoardConfig(), isSupportedBoard(), getDefaultBoardConfig(): camelCase ✓
+- resolveBoardConfig(), generateHardwareConfig(), generateCydHardwareConfig(),
+  generateGuitionHardwareConfig(): camelCase, descriptive ✓
+- FALLBACK_DEFAULT_BOARD_ID, FALLBACK_BOARD_CONFIGS: descriptive constants ✓
+- All naming follows existing codebase conventions.
+
+UNUSED IMPORTS / DEAD CODE
+--------------------------
+Board-related imports are ALL used:
+- config.js: DEFAULT_BOARD_ID, BOARD_OPTIONS, getBoardConfig, isSupportedBoard → used in main.js
+- yaml-engine.js: FALLBACK constants, resolveBoardConfig → used internally
+- import.js: DEFAULT_BOARD_ID, isSupportedBoard → used in resolveBoard()
+- validation-engine.js: isSupportedBoard → used in validateConfig()
+
+Pre-existing (NOT board-related):
+- import.js line 2: cleanYAMLValue imported from utils.js but never used.
+  This is pre-existing debt, not introduced by board feature.
+
+FUNCTION USAGE (board-related code)
+------------------------------------
+config.js:
+  - DEFAULT_BOARD_ID → used in DEFAULT_CONFIG, PRESETS, import.js
+  - BOARD_CONFIGS → used by getBoardConfig, isSupportedBoard, BOARD_OPTIONS
+  - getBoardConfig() → used in main.js updateLEDCompatibility()
+  - isSupportedBoard() → used in import.js, validation-engine.js
+
+yaml-engine.js:
+  - resolveBoardConfig() → used in generateSubstitutions(), generateFullYAML()
+  - generateCoreHardwareConfig() → used by generateCydHardwareConfig(), generateGuitionHardwareConfig()
+  - generateRgbOutputs() → used by generateCydHardwareConfig()
+  - generateLightSection() → used by generateCydHardwareConfig(), generateGuitionHardwareConfig()
+  - generateCydHardwareConfig() → used by generateHardwareConfig()
+  - generateGuitionHardwareConfig() → used by generateHardwareConfig()
+  - pinValue(), pinBlock() → used throughout hardware generation
+  - calculateLVGLLayoutScale() → used in generateLVGLSection()
+  All board-related functions are called. No dead code.
+
+import.js:
+  - resolveBoard() → used in normalizeImportedConfig()
+  Clean and used.
+
+validation-engine.js:
+  - isSupportedBoard (imported) → used in validateConfig() for board validation
+  Clean and used.
+
+main.js:
+  - populateBoardSelector() → called in init()
+  - updateLEDCompatibility() → called in updateGlobalSettings(), setupPresets()
+  - setupGlobalSettings() board listener → wired in setupEventListeners()
+  All board-related UI functions are called.
+
+ERROR HANDLING / EDGE CASES
+----------------------------
+1. Invalid/missing board ID in import:
+   resolveBoard() → returns DEFAULT_BOARD_ID for null, non-string, empty, or unsupported
+   ✓ Defensive, graceful fallback.
+
+2. Missing board config at YAML generation:
+   resolveBoardConfig() → falls back to default board, then to FALLBACK constant
+   ✓ Never returns undefined; always has a valid config.
+
+3. Board without RGB LED:
+   updateLEDCompatibility() → hides rgb-led-controls, disables inputs, sets aria-hidden
+   ✓ Clean UI adaptation.
+
+4. Unsupported board in validation:
+   validateConfig() → adds error with helpful message listing all supported boards
+   ✓ Good user feedback.
+
+5. Legacy code path compatibility:
+   generateHardwareConfig() → returns deps.hardwareConfig for default board (backward compat)
+   generateFullYAML() → if no board deps available, returns null boardConfig and falls back to hardwareConfig
+   ✓ Existing behavior preserved when board feature not engaged.
+
+NO SCOPE CREEP
+--------------
+- Custom board editor: NOT present
+- Pin editor / custom pin mapping UI: NOT present
+- Flash-to-device functionality: NOT present
+- The feature is strictly: select from 6 predefined boards → generate correct YAML
+- Clean, focused implementation.
+
+PRESET HANDLING
+---------------
+- back-garden preset: explicitly sets board: DEFAULT_BOARD_ID ✓
+- living, bedroom presets: inherit board from DEFAULT_CONFIG ✓
+- empty preset: uses DEFAULT_CONFIG (includes board) ✓
+- setupPresets() in main.js: state.board = newConfig.board || DEFAULT_BOARD_ID ✓
+- All existing presets continue to work with default board.
+
+NO REGRESSIONS TO EXISTING CODE PATHS
+-------------------------------------
+- Default board (esp32-2432s028-2port) still uses legacy HARDWARE_CONFIG string
+  via generateHardwareConfig() special-case. This preserves exact YAML output
+  for existing users.
+- DEFAULT_CONFIG.board = DEFAULT_BOARD_ID ensures saved configs without board
+  field still work.
+- Import of legacy configs (without board field) falls back to DEFAULT_BOARD_ID.
+- Window exports (appState, DEFAULT_CONFIG, PRESETS, etc.) preserved.
+
+MINOR OBSERVATIONS (NON-BLOCKING)
+---------------------------------
+1. config.js lines 4-5: leading whitespace before `export` keywords (cosmetic).
+2. yaml-engine.js lines 149-165: esp32-e32r35t and esp32-e32r40t set to null
+   then populated via spread after object creation. Works but slightly awkward.
+3. yaml-engine.js line 418: Guition detection by `hardware.display?.qspi ||
+   hardware.touch?.driver === 'gt911'` is implicit. Acceptable for current scope
+   but would need refinement if more QSPI/GT911 boards are added.
+4. import.js line 2: cleanYAMLValue unused import (pre-existing, not board-related).
+
+================================================================================
+VERDICT: APPROVE
+================================================================================
+
+The board selection feature is clean, focused, and well-implemented. All code
+follows existing naming conventions. No TODO/FIXME/HACK comments. Proper error
+handling and graceful fallbacks throughout. No scope creep. No regressions to
+existing code paths. Build passes successfully.
+
+The one test failure (led_sync in verify-cyd.mjs) is pre-existing and explicitly
+excluded from this review's scope per task instructions.
+================================================================================

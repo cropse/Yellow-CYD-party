@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED, ACTION_SCHEMAS } from './config.js';
+import { DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED, ACTION_SCHEMAS, DEFAULT_BOARD_ID, isSupportedBoard } from './config.js';
 import { normalizeColor, clampNumber, ensureUniquePositions, isPlainYAMLObject, sanitizeDeviceName, cleanYAMLValue, getYAMLSection, splitTopLevelListItems, parseYAMLKeyValue } from './utils.js';
 
 function normalizeLedColor(raw) {
@@ -8,6 +8,14 @@ function normalizeLedColor(raw) {
     g: Math.max(0, Math.min(255, Number(raw.g) || 255)),
     b: Math.max(0, Math.min(255, Number(raw.b) || 0))
   };
+}
+
+function resolveBoard(raw) {
+  if (!raw || typeof raw !== 'string') return DEFAULT_BOARD_ID;
+  const trimmed = raw.trim();
+  if (!trimmed) return DEFAULT_BOARD_ID;
+  if (isSupportedBoard(trimmed)) return trimmed;
+  return DEFAULT_BOARD_ID;
 }
 
 function normalizeLedConfig(source, fallback) {
@@ -36,6 +44,7 @@ export function normalizeImportedConfig(rawConfig) {
     deviceName: sanitizeDeviceName(source.deviceName || DEFAULT_CONFIG.deviceName) || DEFAULT_CONFIG.deviceName,
     niceName: String(source.niceName || DEFAULT_CONFIG.niceName).trim() || DEFAULT_CONFIG.niceName,
     displayTimeout: clampNumber(source.displayTimeout, 90, 3600, DEFAULT_CONFIG.displayTimeout),
+    board: resolveBoard(source.board),
     led: normalizeLedConfig(source.led),
     buttons: Array(12).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings))
   };

@@ -1,0 +1,68 @@
+F1 Plan Compliance Audit — board-selection-feature
+Date: 2026-05-22
+Verdict: REJECT
+
+Required file review completed:
+- .sisyphus/plans/board-selection-feature.md
+- src/modules/config.js
+- src/modules/yaml-engine.js
+- src/modules/import.js
+- src/modules/validation-engine.js
+- src/main.js
+- index.html
+- README.md
+
+LSP diagnostics:
+- FAIL/BLOCKED: lsp_diagnostics on src timed out because global Biome install is broken: Cannot find module '@biomejs/cli-linux-x64/biome'.
+
+Must Have checklist:
+1. Stable board IDs exactly as specified: FAIL. Registry contains 6 IDs and omits the plan-listed `ESP32-2432S028`; plan text also expects selector label for this board.
+2. Exact selector labels: FAIL. `ESP32-2432S028 (320×240)` is missing from BOARD_OPTIONS/registry.
+3. Board registry schema includes id, label, width, height, capabilities.rgbLed, hardware: PASS.
+4. Board-driven width/height substitutions: PASS. generateSubstitutions uses boardConfig.width/height.
+5. LVGL 4x3 grid with scaled dimensions: FAIL. Generated grid keeps 4x3 fr rows/columns and scaled margin only; calculated cellWidth/cellHeight are not emitted or otherwise used.
+6. LVGL scaling algorithm matches plan formula: FAIL. calculateLVGLLayoutScale computes cellWidth/cellHeight but generateLVGLSection only uses outerMargin, so output does not match the required scaled cell dimensions behavior.
+7. No-RGB boards hide/disable RGB controls: PASS. updateLEDCompatibility hides and disables #rgb-led-controls for no-RGB boards.
+8. No-RGB boards omit RGB LED YAML: PASS for board-specific paths and tests.
+9. RGB state preserved on board switch: PASS. Board switching updates state.board only; config.led is not deleted.
+10. Guition generates ESP32-S3/ESP-IDF/PSRAM/QSPI/GT911 YAML: PASS by tests and yaml-engine implementation.
+11. Legacy JSON defaults silently: PASS. normalizeImportedConfig defaults missing/unknown board to DEFAULT_BOARD_ID.
+12. Supported selector/default behavior from plan: FAIL due missing ESP32-2432S028 option and preset handling resets board to default unless preset defines board.
+
+Must NOT Have checklist:
+1. No custom board editor: PASS.
+2. No arbitrary pin editor: PASS.
+3. No upload/flash flow: PASS.
+4. No runtime board detection: PASS.
+5. No audio/SD/battery/LDR feature generation: PASS. Only icon search categories contain audio/battery labels; no board feature UI/generation found.
+6. No full rewrite of main.js: PASS/LOW CONFIDENCE. main.js remains same orchestration file with added board wiring; no wholesale class/component rewrite observed.
+7. No class hierarchy: PASS.
+8. No secrets in YAML: PASS. Generated core YAML uses !secret placeholders for api/ota/wifi.
+9. No hardcoded 320/240 outside registry except baseline helper: FAIL. yaml-engine.js duplicates FALLBACK_BOARD_CONFIGS with hardcoded dimensions outside config.js registry; this is a second registry/fallback hardware source in generation code.
+10. No direct feature logic in index.html: PASS. index.html has static selector/container markup; board logic is in JS.
+
+Definition of Done command results:
+1. node src/modules/tests/test-board-registry.js: PASS
+2. node src/modules/tests/test-yaml-board-generation.js: PASS
+3. node src/modules/tests/test-import-export-board.js: PASS
+4. node src/modules/tests/test-validation-board.mjs: PASS
+5. node src/modules/tests/test-yaml.js: FAIL. 13 generatePackages subtests fail with TypeError: buttons.forEach is not a function.
+6. node src/modules/tests/test-store.js: PASS
+7. node src/modules/tests/test-import.js: PASS
+8. node src/modules/tests/test-schemas.mjs: PASS
+9. node src/modules/tests/test-validation.mjs: PASS
+10. node test-preview-fix.js: PASS
+11. npm run build: PASS
+12. npm test: FAIL. verify-cyd.mjs throws: generated YAML missing led_sync global LED control.
+13. node ci/test-cyd-integration.cjs: FAIL. 27 passed, 2 failed: T16 device/nice mismatch and T21 locator timeout for div[aria-label*="Btn"].
+
+DoD summary: 10/13 pass.
+
+Issues found:
+- Missing plan-listed board ID/label `ESP32-2432S028` / `ESP32-2432S028 (320×240)`.
+- LVGL scaling calculates cell dimensions but does not apply them to generated YAML.
+- Existing YAML module tests fail in generatePackages; DoD cannot approve.
+- npm test fails because global LED sync YAML is missing.
+- E2E integration command fails 2 assertions/timeouts.
+- yaml-engine.js carries duplicated fallback board metadata/hardcoded default dimensions outside the registry.
+- LSP diagnostics are blocked by broken Biome installation in the environment.

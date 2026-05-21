@@ -27,6 +27,23 @@ A web-based tool for generating ESPHome YAML configurations for CYD (Cheap Yello
 - **Dark/Light Theme**: Toggle between themes
 - **Offline Support**: Works offline after initial load (icon search requires internet)
 
+## Supported Boards
+
+The generator supports the following boards:
+
+| Board | Resolution | RGB LED |
+|---|---|---|
+| ESP32-2432S028-2port (default) | 320×240 | ✅ |
+| ESP32-E32R28T | 320×240 | ❌ |
+| ESP32-3248S035C | 480×320 | ✅ |
+| ESP32-E32R35T | 480×320 | ✅ |
+| ESP32-E32R40T | 480×320 | ✅ |
+| Guition JC4827543C | 480×272 | ❌ |
+
+Use the board selector to choose the target hardware before generating YAML. The default board is ESP32-2432S028-2port.
+
+Note: The Guition JC4827543C uses ESP32-S3 with ESP-IDF framework, QSPI display, and GT911 touch controller. Boards without an RGB LED (ESP32-E32R28T, Guition JC4827543C) hide the RGB LED controls and omit related configuration from the generated YAML.
+
 ## Usage
 
 ### Quick Start
