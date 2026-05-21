@@ -133,6 +133,7 @@ export function generateFontSection(buttons, deps) {
     size: 12
     glyphs:
       - "0123456789 /%'"
+      - ":"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
