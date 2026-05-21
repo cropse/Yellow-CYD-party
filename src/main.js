@@ -1,11 +1,11 @@
 import './styles/main.css';
-import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHES, DEFAULT_BUTTON } from './modules/config.js';
+import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHES, DEFAULT_BUTTON, DEFAULT_LED } from './modules/config.js';
 import { createStore } from './modules/store.js';
 import * as YamlGenerationEngine from './modules/yaml-engine.js';
 import * as ValidationEngine from './modules/validation-engine.js';
 import { normalizeColor, clampNumber, escapeHTML } from './modules/utils.js';
 import { normalizeImportedConfig } from './modules/import.js';
-import { loadMDIData, getIconByCodepoint, searchIcons } from './modules/mdi.js';
+import { loadMDIData, getMdiData, getIconByCodepoint, searchIcons, searchIconsByCategory, getRecentIcons, addRecentIcon, getFavorites, toggleFavorite, isFavorite } from './modules/mdi.js';
 
 function showToast(message, type = 'success', duration = 3000) {
   const container = document.getElementById('toast-container') || createToastContainer();
@@ -60,21 +60,63 @@ const COLOR_THEMES = {
   neon: ['FF073A', 'FF61F6', 'A020F0', '00FF00', '39FF14', '00FFFF', 'FF00FF', 'FFFF00']
 };
 
-const ICON_CATEGORIES = {
-  popular: { name: 'Popular', icons: ['F0594', 'F0595', 'F059C', 'F0583', 'F1B94', 'F040E', 'F03E4', 'F040A', 'F091D', 'F17C9', 'F032A', 'F024A', 'F1846', 'F1847', 'F0402', 'F1A5C', 'F025A', 'F1915'] },
-  home: { name: 'Home', icons: ['F024A', 'F032A', 'F02DC', 'F02DD', 'F10BC', 'F10BD', 'F10BE', 'F10BF', 'F10C0', 'F10C1'] },
-  tech: { name: 'Tech', icons: ['F0594', 'F0595', 'F059C', 'F0583', 'F1B94', 'F040E', 'F03E4', 'F040A'] },
-  media: { name: 'Media', icons: ['F040E', 'F03E4', 'F040A', 'F0402', 'F1A5C', 'F025A', 'F1915'] },
-  light: { name: 'Light', icons: ['F091D', 'F17C9', 'F1051', 'F0335', 'F076A', 'F1020'] },
-  climate: { name: 'Climate', icons: ['F0210', 'F0503', 'F0502', 'F0501', 'F0C6A', 'F0C6B'] }
-};
+// Category structure matching pictogrammers.com layout.
+// Each entry: { key, label, icon (emoji shorthand), mdiTag (the MDI tag to match) }
+const MDI_CATEGORIES = [
+  { key: 'home-automation', label: 'Home Automation', icon: '🏠', tag: 'Home Automation' },
+  { key: 'account-user', label: 'Account / User', icon: '👤', tag: 'Account / User' },
+  { key: 'arrow', label: 'Arrow', icon: '➡️', tag: 'Arrow' },
+  { key: 'alert-error', label: 'Alert / Error', icon: '⚠️', tag: 'Alert / Error' },
+  { key: 'automotive', label: 'Automotive', icon: '🚗', tag: 'Automotive' },
+  { key: 'battery', label: 'Battery', icon: '🔋', tag: 'Battery' },
+  { key: 'banking', label: 'Banking', icon: '🏦', tag: 'Banking' },
+  { key: 'brand-logo', label: 'Brand / Logo', icon: '🏷️', tag: 'Brand / Logo' },
+  { key: 'weather', label: 'Weather', icon: '☀️', tag: 'Weather' },
+  { key: 'settings', label: 'Settings', icon: '⚙️', tag: 'Settings' },
+  { key: 'lock', label: 'Lock', icon: '🔒', tag: 'Lock' },
+  { key: 'device-tech', label: 'Device / Tech', icon: '📱', tag: 'Device / Tech' },
+  { key: 'files-folders', label: 'Files / Folders', icon: '📁', tag: 'Files / Folders' },
+  { key: 'food-drink', label: 'Food / Drink', icon: '🍕', tag: 'Food / Drink' },
+  { key: 'gaming-rpg', label: 'Gaming / RPG', icon: '🎮', tag: 'Gaming / RPG' },
+  { key: 'music', label: 'Music', icon: '🎵', tag: 'Music' },
+  { key: 'navigation', label: 'Navigation', icon: '🧭', tag: 'Navigation' },
+  { key: 'text-format', label: 'Text / Format', icon: '✏️', tag: 'Text / Content / Format' },
+  { key: 'transport-road', label: 'Transport + Road', icon: '🛣️', tag: 'Transportation + Road' },
+  { key: 'video-movie', label: 'Video / Movie', icon: '🎬', tag: 'Video / Movie' },
+  { key: 'medical', label: 'Medical / Hospital', icon: '🏥', tag: 'Medical / Hospital' },
+  { key: 'sport', label: 'Sport', icon: '⚽', tag: 'Sport' },
+  { key: 'shopping', label: 'Shopping', icon: '🛒', tag: 'Shopping' },
+  { key: 'math', label: 'Math', icon: '🔢', tag: 'Math' },
+  { key: 'nature', label: 'Nature', icon: '🌿', tag: 'Nature' },
+  { key: 'photography', label: 'Photography', icon: '📷', tag: 'Photography' },
+  { key: 'edit-modify', label: 'Edit / Modify', icon: '📝', tag: 'Edit / Modify' },
+  { key: 'audio', label: 'Audio', icon: '🔊', tag: 'Audio' },
+  { key: 'shape', label: 'Shape', icon: '⬜', tag: 'Shape' },
+];
 
 let appState = loadState();
 let selectedButtonIndex = 0;
 let copiedButtonConfig = null;
+
+function getLed() {
+  const led = appState.led;
+  if (led && typeof led === 'object' && 'enabled' in led) return led;
+  return { ...DEFAULT_LED, enabled: Boolean(led) };
+}
+
+function setLed(patch) {
+  store.update('LED changed', next => {
+    const current = next.led && typeof next.led === 'object' ? next.led : DEFAULT_LED;
+    next.led = {
+      ...current,
+      ...patch,
+      color: patch.color ? { ...patch.color } : { ...current.color }
+    };
+  });
+}
 let currentIconTarget = 'main';
 let selectedIconInModal = null;
-let selectedIconCategory = 'popular';
+let selectedIconCategory = 'all';
 let activeColorTheme = 'basic';
 let lastModalTrigger = null;
 
@@ -89,6 +131,7 @@ const store = createStore({
     render: () => {
       renderGridPreview();
       renderEditorPanel();
+      updateGlobalSettings();
     },
     generate: generateYAML,
     validate: () => runValidation({ showSummary: false })
@@ -138,10 +181,11 @@ async function init() {
   console.log('Initialization complete!');
 }
 
+let gridCellCache = null;
+
 function renderGridPreview() {
   const container = document.getElementById('grid-preview');
   if (!container) return;
-  container.innerHTML = '';
 
   const positionMap = new Map();
   appState.buttons.forEach((btn, idx) => {
@@ -150,44 +194,85 @@ function renderGridPreview() {
     positionMap.get(key).push(idx);
   });
 
+  const hasPositionChanges = appState.buttons.some((btn, i) => {
+    const cached = gridCellCache?.[i];
+    return !cached || cached.col !== btn.col || cached.row !== btn.row;
+  });
+
+  const needsFullRebuild = !gridCellCache || hasPositionChanges;
+
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 4; col++) {
-      const cell = document.createElement('div');
-      cell.className = 'grid-cell';
-      cell.dataset.col = col;
-      cell.dataset.row = row;
-
       const btnIndex = appState.buttons.findIndex(b => b.col === col && b.row === row);
       const hasConflict = positionMap.get(`${col},${row}`)?.length > 1;
 
-      if (btnIndex >= 0) {
+      let cell = container.querySelector(`[data-col="${col}"][data-row="${row}"]`);
+
+      if (needsFullRebuild || !cell || (cell.dataset.btnIndex !== String(btnIndex))) {
+        if (cell) container.removeChild(cell);
+        cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.dataset.col = col;
+        cell.dataset.row = row;
+        cell.dataset.btnIndex = btnIndex >= 0 ? String(btnIndex) : 'empty';
+
+        const attachListeners = () => {
+          cell.addEventListener('click', () => selectButton(btnIndex));
+          cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
+        };
+
+        if (btnIndex >= 0) {
+          const btn = appState.buttons[btnIndex];
+          const iconData = getIconByCodepoint(btn.icon);
+
+          cell.innerHTML = `
+            <span class="position-badge">${col + 1},${row + 1}</span>
+            <span class="icon" style="font-family: 'Material Design Icons'; font-size: ${btn.font === 'roboto_12' ? '18px' : btn.font === 'arimo14' ? '20px' : '22px'}; color: #${btn.color};">${iconData?.char || ''}</span>
+            <span class="label">${escapeHTML(btn.label)}</span>
+          `;
+
+          if (btnIndex === selectedButtonIndex) cell.classList.add('selected');
+          if (hasConflict) cell.classList.add('position-conflict');
+
+          attachListeners();
+          cell.tabIndex = 0;
+          cell.setAttribute('role', 'button');
+          cell.setAttribute('aria-label', `Edit ${btn.label}`);
+        } else {
+          cell.innerHTML = `
+            <span class="position-badge">${col + 1},${row + 1}</span>
+            <span class="label text-muted">Empty</span>
+          `;
+          cell.classList.add('empty');
+          cell.tabIndex = -1;
+        }
+
+        container.appendChild(cell);
+      } else if (btnIndex >= 0) {
+        // Cell exists and button hasn't moved — update content in place.
         const btn = appState.buttons[btnIndex];
         const iconData = getIconByCodepoint(btn.icon);
-        
-        cell.innerHTML = `
-          <span class="position-badge">${col + 1},${row + 1}</span>
-          <span class="icon" style="font-family: 'Material Design Icons'; font-size: ${btn.font === 'roboto_12' ? '18px' : btn.font === 'arimo14' ? '20px' : '22px'}; color: #${btn.color};">${iconData?.char || ''}</span>
-          <span class="label">${escapeHTML(btn.label)}</span>
-        `;
-        
-        if (btnIndex === selectedButtonIndex) cell.classList.add('selected');
-        if (hasConflict) cell.classList.add('position-conflict');
-        
-        cell.addEventListener('click', () => selectButton(btnIndex));
-        cell.tabIndex = 0;
-        cell.setAttribute('role', 'button');
+        const fontSize = btn.font === 'roboto_12' ? '18px' : btn.font === 'arimo14' ? '20px' : '22px';
+        const iconSpan = cell.querySelector('.icon');
+        if (iconSpan) {
+          iconSpan.style.fontSize = fontSize;
+          iconSpan.style.color = `#${btn.color}`;
+          iconSpan.textContent = iconData?.char || '';
+        }
+        const labelSpan = cell.querySelector('.label');
+        if (labelSpan) labelSpan.textContent = btn.label;
+        cell.classList.toggle('selected', btnIndex === selectedButtonIndex);
+        cell.classList.toggle('position-conflict', !!hasConflict);
         cell.setAttribute('aria-label', `Edit ${btn.label}`);
-        cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
       } else {
-        cell.innerHTML = `
-          <span class="position-badge">${col + 1},${row + 1}</span>
-          <span class="label text-muted">Empty</span>
-        `;
-        cell.classList.add('empty');
-        cell.tabIndex = -1;
+        cell.classList.toggle('selected', false);
+        cell.classList.toggle('position-conflict', !!hasConflict);
       }
 
-      container.appendChild(cell);
+      if (btnIndex >= 0) {
+        if (!gridCellCache) gridCellCache = new Array(12);
+        gridCellCache[btnIndex] = { col, row };
+      }
     }
   }
 }
@@ -220,6 +305,54 @@ function handleGridKeydown(e, col, row, btnIndex) {
   }
 }
 
+const LED_COLOR_PRESETS = [
+  { name: 'Green', r: 0, g: 255, b: 0 },
+  { name: 'Red', r: 255, g: 0, b: 0 },
+  { name: 'Amber', r: 255, g: 152, b: 0 },
+  { name: 'Blue', r: 74, g: 158, b: 255 },
+  { name: 'White', r: 255, g: 255, b: 255 }
+];
+
+function colorMatchIndex(color) {
+  if (!color || typeof color !== 'object') return -1;
+  return LED_COLOR_PRESETS.findIndex(p => p.r === color.r && p.g === color.g && p.b === color.b);
+}
+
+function renderLedControl() {
+  const led = getLed();
+  const cb = document.getElementById('led-control');
+  if (cb) cb.checked = led.enabled;
+
+  const effect = document.getElementById('led-effect');
+  if (effect) effect.value = led.effect || 'on-entity';
+
+  const entityInput = document.getElementById('led-entity');
+  if (entityInput) entityInput.value = led.entity || '';
+
+  const onStateInput = document.getElementById('led-on-state');
+  if (onStateInput) onStateInput.value = led.onState || '';
+
+  const brightness = document.getElementById('led-brightness');
+  if (brightness) brightness.value = led.brightness ?? 100;
+
+  const val = document.querySelector('.led-slider-value');
+  if (val) val.textContent = `${led.brightness ?? 100}%`;
+
+  const dot = document.querySelector('.led-dot');
+  if (dot) {
+    const c = led.color || DEFAULT_LED.color;
+    dot.style.background = `rgb(${c.r},${c.g},${c.b})`;
+    dot.style.boxShadow = led.enabled ? `0 0 8px rgba(${c.r},${c.g},${c.b},0.5)` : 'none';
+  }
+
+  const status = document.querySelector('.led-status');
+  if (status) status.textContent = led.enabled ? 'LED active on entity sync' : 'LED disabled';
+
+  document.querySelectorAll('.led-color-chip').forEach((chip, i) => {
+    chip.classList.toggle('active', colorMatchIndex(led.color) === i);
+  });
+}
+
 function renderEditorPanel() {
   const btn = appState.buttons[selectedButtonIndex];
   if (!btn) return;
@@ -236,8 +369,8 @@ function renderEditorPanel() {
 
   const isCheckableOrTimer = btn.type === 'checkable' || btn.type === 'timer_sync';
   document.getElementById('checkable-options').classList.toggle('hidden', !isCheckableOrTimer);
+  document.getElementById('checkable-icons').classList.toggle('hidden', !isCheckableOrTimer);
   document.getElementById('timer-default-label-group')?.classList.toggle('hidden', btn.type !== 'timer_sync');
-  document.getElementById('led-control').checked = btn.ledControl;
   document.getElementById('ha-entity').value = btn.haEntity || '';
   document.getElementById('on-state').value = btn.onState || 'on';
   document.getElementById('timer-default-label').value = btn.timerDefaultLabel || '';
@@ -305,8 +438,7 @@ function renderActionFields(containerId, actionType, data, isLong) {
     label.htmlFor = input.id;
     group.appendChild(label);
     input.classList.add('form-control');
-    input.addEventListener('focus', () => pushHistory());
-    input.addEventListener('change', (e) => {
+    input.addEventListener('input', (e) => {
       const pressKey = isLong ? 'longPress' : 'shortPress';
       store.update(`Update ${field.name}`, state => {
         state.buttons[selectedButtonIndex][pressKey].data[field.name] = e.target.value;
@@ -375,13 +507,15 @@ function updateColorDisplay(color) {
 
 function updateIconPreview(target, iconCode) {
   const iconData = getIconByCodepoint(iconCode);
-  const prefix = target === 'icon' ? '' : `${target}-`;
+  const prefix = target === 'icon' ? 'icon-' : `${target}-`;
 
-  const previewEl = document.getElementById(`${prefix}preview`) || document.getElementById(`icon-${target}-preview`);
-  const nameEl = document.getElementById(`${prefix}name`) || document.getElementById(`icon-${target}-name`);
+  const previewEl = document.getElementById(`${prefix}preview`);
+  const nameEl = document.getElementById(`${prefix}name`);
+  const codeEl = document.getElementById(`${prefix}code`);
 
   if (previewEl) previewEl.textContent = iconData?.char || '?';
   if (nameEl) nameEl.textContent = iconData?.name || 'Unknown';
+  if (codeEl) codeEl.textContent = iconData?.codepoint || (iconCode || '');
 }
 
 function updateGlobalSettings() {
@@ -389,6 +523,7 @@ function updateGlobalSettings() {
   document.getElementById('nice-name').value = appState.niceName || '';
   document.getElementById('display-timeout').value = appState.displayTimeout || 600;
   document.getElementById('device-name-hint').textContent = appState.deviceName ? `hostname: ${appState.deviceName}` : '';
+  renderLedControl();
 }
 
 function generateYAML() {
@@ -514,6 +649,7 @@ function setupEventListeners() {
   setupPresets();
   setupGridControls();
   setupButtonEditor();
+  setupLedControl();
   setupColorPickers();
   setupIconPickers();
   setupModals();
@@ -588,6 +724,7 @@ function setupPresets() {
           const newConfig = PRESETS[preset]();
           Object.assign(state, newConfig);
         });
+        renderLedControl();
       }
     });
   });
@@ -624,6 +761,7 @@ function setupButtonEditor() {
       btn.setAttribute('aria-checked', 'true');
       const isCheckableOrTimer = type === 'checkable' || type === 'timer_sync';
       document.getElementById('checkable-options').classList.toggle('hidden', !isCheckableOrTimer);
+      document.getElementById('checkable-icons').classList.toggle('hidden', !isCheckableOrTimer);
       document.getElementById('timer-default-label-group')?.classList.toggle('hidden', type !== 'timer_sync');
     });
   });
@@ -639,9 +777,37 @@ function setupButtonEditor() {
   document.getElementById('timer-default-label')?.addEventListener('input', (e) => {
     store.button('timerDefaultLabel', e.target.value);
   });
+}
 
+function setupLedControl() {
   document.getElementById('led-control')?.addEventListener('change', (e) => {
-    store.button('ledControl', e.target.checked);
+    setLed({ enabled: e.target.checked });
+  });
+
+  document.getElementById('led-effect')?.addEventListener('change', (e) => {
+    setLed({ effect: e.target.value });
+  });
+
+  document.getElementById('led-entity')?.addEventListener('input', (e) => {
+    setLed({ entity: e.target.value });
+  });
+
+  document.getElementById('led-on-state')?.addEventListener('input', (e) => {
+    setLed({ onState: e.target.value });
+  });
+
+  document.getElementById('led-brightness')?.addEventListener('input', (e) => {
+    const v = Number(e.target.value);
+    setLed({ brightness: v });
+    const val = document.querySelector('.led-slider-value');
+    if (val) val.textContent = `${v}%`;
+  });
+
+  document.querySelectorAll('.led-color-chip').forEach((chip, i) => {
+    chip.addEventListener('click', () => {
+      const preset = LED_COLOR_PRESETS[i];
+      if (preset) setLed({ color: { r: preset.r, g: preset.g, b: preset.b } });
+    });
   });
 }
 
@@ -849,21 +1015,45 @@ function closeValidationModal() {
   closeModal('validation-modal');
 }
 
+const iconCategoryTimers = new WeakMap();
+
 function renderIconCategories() {
   const container = document.getElementById('icon-category-tabs');
   if (!container) return;
 
-  container.innerHTML = Object.entries(ICON_CATEGORIES).map(([key, cat]) => `
-    <button type="button" class="btn btn-sm ${key === selectedIconCategory ? 'active' : ''}" data-category="${key}">
-      ${cat.name}
+  const mdiData = getMdiData();
+  const categoryCounts = new Map();
+  for (const [, icon] of mdiData) {
+    for (const cat of icon.categories || []) {
+      categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+    }
+  }
+
+  const tabs = [
+    { key: 'recent', name: 'Recent', icon: '⏱' },
+    { key: 'favorites', name: 'Favorites', icon: '★' },
+    { key: 'all', name: 'All', icon: '🔀' },
+    ...MDI_CATEGORIES.filter(cat => categoryCounts.has(cat.tag))
+      .map(cat => ({ key: cat.key, name: cat.label, icon: cat.icon }))
+  ];
+
+  if (!tabs.some(tab => tab.key === selectedIconCategory)) {
+    selectedIconCategory = 'all';
+  }
+
+  container.className = 'icon-category-tabs';
+  container.innerHTML = tabs.map(tab => `
+    <button type="button" class="icon-cat-btn ${tab.key === selectedIconCategory ? 'active' : ''}"
+            data-category="${escapeHTML(tab.key)}">
+      ${tab.icon ? `<span class="cat-icon">${tab.icon}</span>` : ''}${escapeHTML(tab.name)}
     </button>
   `).join('');
 
-  container.querySelectorAll('button').forEach(btn => {
+  container.querySelectorAll('.icon-cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedIconCategory = btn.dataset.category;
       renderIconCategories();
-      renderIconResults('');
+      renderIconResults(document.getElementById('icon-search')?.value || '');
     });
   });
 }
@@ -872,25 +1062,82 @@ function renderIconResults(query) {
   const container = document.getElementById('icon-results');
   if (!container) return;
 
-  const icons = searchIcons(query, 200);
+  let icons = [];
+
+  if (query) {
+    icons = searchIcons(query, 200);
+  } else if (selectedIconCategory === 'recent') {
+    const recentCodepoints = getRecentIcons();
+    icons = recentCodepoints
+      .map(cp => getIconByCodepoint(cp))
+      .filter(Boolean);
+  } else if (selectedIconCategory === 'favorites') {
+    const favCodepoints = getFavorites();
+    icons = favCodepoints
+      .map(cp => getIconByCodepoint(cp))
+      .filter(Boolean);
+  } else if (selectedIconCategory !== 'all') {
+    const catDef = MDI_CATEGORIES.find(c => c.key === selectedIconCategory);
+    if (catDef) {
+      icons = searchIconsByCategory(catDef.tag, 200);
+    }
+  } else {
+    icons = searchIcons('', 200);
+  }
 
   if (icons.length === 0) {
-    container.innerHTML = '<p class="text-muted">No icons found</p>';
+    const emptyMsg = selectedIconCategory === 'favorites'
+      ? 'No favorites yet. Double-click any icon to pin it here.'
+      : selectedIconCategory === 'recent'
+        ? 'No recent icons. Select icons and they appear here.'
+        : (query ? 'No icons match your search.' : 'No icons available.');
+    container.innerHTML = `<div class="icon-empty"><p>${emptyMsg}</p></div>`;
     return;
   }
 
-  container.innerHTML = icons.map(icon => `
-    <button type="button" class="icon-result ${selectedIconInModal === icon.codepoint ? 'selected' : ''}" 
-            data-codepoint="${icon.codepoint}" data-name="${escapeHTML(icon.name)}">
-      <span class="icon-char" style="font-family: 'Material Design Icons'">${icon.char}</span>
-      <span class="icon-name">${escapeHTML(icon.name)}</span>
-    </button>
-  `).join('');
+  // Batch favorite lookups instead of per-icon localStorage reads.
+  const favSet = new Set(getFavorites());
 
-  container.querySelectorAll('.icon-result').forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectIcon(btn.dataset.codepoint);
-    });
+  const countLabel = document.createElement('div');
+  countLabel.className = 'icon-count';
+  countLabel.textContent = `${icons.length} icon${icons.length === 1 ? '' : 's'}`;
+
+  const grid = document.createElement('div');
+  grid.className = 'icon-grid';
+  grid.innerHTML = icons.map(icon => {
+    const fav = favSet.has(icon.codepoint);
+    return `
+      <button type="button" class="icon-result ${selectedIconInModal === icon.codepoint ? 'selected' : ''}"
+              data-codepoint="${icon.codepoint}" data-name="${escapeHTML(icon.name)}">
+        <span class="icon-char" style="font-family: 'Material Design Icons'">${icon.char}</span>
+        <span class="icon-name">${escapeHTML(icon.name)}</span>
+        ${fav ? '<span class="icon-fav-badge" title="Favorited">★</span>' : ''}
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = '';
+  container.appendChild(countLabel);
+  container.appendChild(grid);
+
+  // Single delegated listener on the grid instead of one per button (up to 200).
+  const clickTimers = new Map();
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.icon-result');
+    if (!btn) return;
+    const codepoint = btn.dataset.codepoint;
+    const timer = clickTimers.get(codepoint);
+    if (timer) {
+      clearTimeout(timer);
+      clickTimers.delete(codepoint);
+      toggleFavorite(codepoint);
+      renderIconResults(document.getElementById('icon-search')?.value || '');
+      return;
+    }
+    clickTimers.set(codepoint, setTimeout(() => {
+      clickTimers.delete(codepoint);
+      selectIcon(codepoint);
+    }, 250));
   });
 }
 
@@ -905,6 +1152,7 @@ function selectIcon(codepoint) {
     store.button('iconOff', codepoint);
     updateIconPreview('icon-off', codepoint);
   }
+  addRecentIcon(codepoint);
   closeIconPicker();
 }
 
@@ -1040,7 +1288,6 @@ window.ACTION_SCHEMAS = ACTION_SCHEMAS;
 window.HARDWARE_CONFIG = HARDWARE_CONFIG;
 window.COLOR_SWATCHES = COLOR_SWATCHES;
 window.COLOR_THEMES = COLOR_THEMES;
-window.ICON_CATEGORIES = ICON_CATEGORIES;
 window.store = store;
 window.YamlGenerationEngine = YamlGenerationEngine;
 window.ValidationEngine = ValidationEngine;
