@@ -181,7 +181,7 @@ async function init() {
   renderColorThemePresets();
   renderColorSwatches();
   populateBoardSelector();
-  updateBoardSupportWarning(appState.board || DEFAULT_BOARD_ID);
+  updateBoardSupportWarning(getBoardId());
   renderGridPreview();
   renderEditorPanel();
   updateGlobalSettings();
@@ -193,6 +193,16 @@ async function init() {
 }
 
 let gridCellCache = null;
+
+// ── State accessor helpers (consolidate repeated fallback patterns) ─────
+const getBoardId = () => appState.board || DEFAULT_BOARD_ID;
+const getGridColumns = () => appState.gridColumns || DEFAULT_CONFIG.gridColumns;
+const getGridRows = () => appState.gridRows || DEFAULT_CONFIG.gridRows;
+const getIconSize = () => appState.iconSize || DEFAULT_CONFIG.iconSize;
+
+function getPreviewFontSize(font) {
+  return font === 'roboto_12' ? '18px' : font === 'arimo14' ? '20px' : '22px';
+}
 
 function getGridDragButtonIndex(cell) {
   if (!cell || cell.dataset.btnIndex === 'empty') return -1;
@@ -303,9 +313,9 @@ function renderGridPreview() {
   const container = document.getElementById('grid-preview');
   if (!container) return;
 
-  const gridColumns = appState.gridColumns || DEFAULT_CONFIG.gridColumns;
-  const gridRows = appState.gridRows || DEFAULT_CONFIG.gridRows;
-  const iconSize = appState.iconSize || DEFAULT_CONFIG.iconSize;
+  const gridColumns = getGridColumns();
+  const gridRows = getGridRows();
+  const iconSize = getIconSize();
   if (typeof container.style?.setProperty === 'function') {
     container.style.setProperty('--grid-columns', gridColumns);
     container.style.setProperty('--grid-rows', gridRows);
@@ -347,7 +357,7 @@ function renderGridPreview() {
 
       cell.innerHTML = `
         <span class="position-badge">${col + 1},${row + 1}</span>
-        <span class="icon" style="font-family: 'Material Design Icons'; font-size: ${appState.iconSize || 48}px; color: #${btn.color};">${iconData?.char || ''}</span>
+        <span class="icon" style="font-family: 'Material Design Icons'; font-size: ${getPreviewFontSize(btn.font)}; color: #${btn.color};">${iconData?.char || ''}</span>
         <span class="label">${escapeHTML(btn.label)}</span>
       `;
 
@@ -396,10 +406,10 @@ function renderGridPreview() {
       } else if (btnIndex >= 0) {
         const btn = appState.buttons[btnIndex];
         const iconData = getIconByCodepoint(btn.icon);
-        const iconSize = appState.iconSize || 48;
+        const fontSize = getPreviewFontSize(btn.font);
         const iconSpan = cell.querySelector('.icon');
         if (iconSpan) {
-          iconSpan.style.fontSize = `${iconSize}px`;
+          iconSpan.style.fontSize = fontSize;
           iconSpan.style.color = `#${btn.color}`;
           iconSpan.textContent = iconData?.char || '';
         }
@@ -440,8 +450,8 @@ function handleGridKeydown(e, col, row, btnIndex) {
   if (!delta) return;
   
   e.preventDefault();
-  const maxCol = (appState.gridColumns || DEFAULT_CONFIG.gridColumns) - 1;
-  const maxRow = (appState.gridRows || DEFAULT_CONFIG.gridRows) - 1;
+  const maxCol = getGridColumns() - 1;
+  const maxRow = getGridRows() - 1;
   const newCol = Math.max(0, Math.min(maxCol, col + delta[0]));
   const newRow = Math.max(0, Math.min(maxRow, row + delta[1]));
   
@@ -676,7 +686,7 @@ function populateBoardSelector() {
   select.innerHTML = BOARD_OPTIONS.map(opt =>
     `<option value="${escapeHTML(opt.id)}">${escapeHTML(opt.label)}</option>`
   ).join('');
-  select.value = appState.board || DEFAULT_BOARD_ID;
+  select.value = getBoardId();
   populateGridSelector();
 }
 
@@ -713,7 +723,7 @@ function populateGridSelector() {
   const boardConfig = getCurrentBoardConfig();
   const options = getAllowedGridOptions(boardConfig);
   const isLocked = options.length === 1;
-  const current = getNormalizedGridForBoard(boardConfig, appState.gridColumns || DEFAULT_CONFIG.gridColumns, appState.gridRows || DEFAULT_CONFIG.gridRows);
+  const current = getNormalizedGridForBoard(boardConfig, getGridColumns(), getGridRows());
 
   select.innerHTML = options.map(option => {
     const label = `${option.columns}×${option.rows}${isLocked ? ' (locked)' : ''}`;
@@ -733,7 +743,7 @@ function populateGridSelector() {
 }
 
 function updateLEDCompatibility() {
-  const boardConfig = getBoardConfig(appState.board || DEFAULT_BOARD_ID);
+  const boardConfig = getBoardConfig(getBoardId());
   const hasRgb = boardConfig?.capabilities?.rgbLed === true;
   const rgbSection = document.getElementById('rgb-led-controls') || document.querySelector('[data-rgb-led]');
   if (!rgbSection) return;
@@ -762,16 +772,16 @@ function updateGlobalSettings() {
   document.getElementById('nice-name').value = appState.niceName || '';
   document.getElementById('display-timeout').value = appState.displayTimeout || 600;
   const boardSelect = document.getElementById('board-select');
-  if (boardSelect) boardSelect.value = appState.board || DEFAULT_BOARD_ID;
-  const flipHorizontal = document.getElementById('flip-horizontal');
-  if (flipHorizontal) flipHorizontal.checked = Boolean(appState.flipHorizontal);
+  if (boardSelect) boardSelect.value = getBoardId();
+  const rotate180Checkbox = document.getElementById('rotate-180');
+  if (rotate180Checkbox) rotate180Checkbox.checked = Boolean(appState.rotate180);
   const iconSizeInput = document.getElementById('icon-size');
-  if (iconSizeInput) iconSizeInput.value = appState.iconSize || DEFAULT_CONFIG.iconSize;
+  if (iconSizeInput) iconSizeInput.value = getIconSize();
   populateGridSelector();
   document.getElementById('device-name-hint').textContent = appState.deviceName ? `hostname: ${appState.deviceName}` : '';
   renderLedControl();
   updateLEDCompatibility();
-  updateBoardSupportWarning(appState.board || DEFAULT_BOARD_ID);
+  updateBoardSupportWarning(getBoardId());
 }
 
 function generateYAML() {
@@ -1008,8 +1018,8 @@ function setupGlobalSettings() {
     });
   });
 
-  document.getElementById('flip-horizontal')?.addEventListener('change', (e) => {
-    store.update('Toggle horizontal flip', state => { state.flipHorizontal = e.target.checked; });
+  document.getElementById('rotate-180')?.addEventListener('change', (e) => {
+    store.update('Toggle 180° rotation', state => { state.rotate180 = e.target.checked; });
   });
 
   document.getElementById('icon-size')?.addEventListener('input', (e) => {
@@ -1030,7 +1040,7 @@ function setupPresets() {
         });
         renderLedControl();
         updateLEDCompatibility();
-        updateBoardSupportWarning(appState.board || DEFAULT_BOARD_ID);
+        updateBoardSupportWarning(getBoardId());
       }
     });
   });
