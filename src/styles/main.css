@@ -164,7 +164,7 @@ main {
 
 @media (min-width: 1024px) {
   main {
-    grid-template-columns: 320px 1fr 400px;
+    grid-template-columns: minmax(360px, 400px) 1fr 400px;
     grid-template-rows: auto auto;
   }
 
@@ -300,13 +300,13 @@ h2 {
   display: grid;
   grid-template-columns: repeat(var(--grid-columns, 4), 1fr);
   grid-template-rows: repeat(var(--grid-rows, 3), 1fr);
-  gap: 6px;
-  aspect-ratio: var(--grid-columns, 4) / var(--grid-rows, 3);
+  gap: 5.4px;
   min-height: 240px;
   background: var(--bg-primary);
-  padding: 6px;
+  padding: 5.4px;
   border-radius: var(--radius-md);
   margin-bottom: 1rem;
+  width: 100%;
 }
 
 .grid-cell {
@@ -1889,4 +1889,5 @@ Utilities
 .skip-link:focus {
   top: 0;
 }
+
 
