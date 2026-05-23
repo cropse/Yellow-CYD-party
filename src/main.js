@@ -3,9 +3,18 @@ import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHE
 import { createStore } from './modules/store.js';
 import * as YamlGenerationEngine from './modules/yaml-engine.js';
 import * as ValidationEngine from './modules/validation-engine.js';
-import { normalizeColor, clampNumber, escapeHTML } from './modules/utils.js';
+import { normalizeColor, clampNumber, yamlDoc, yamlInclude, yamlRaw, yamlSecret } from './modules/utils.js';
 import { normalizeImportedConfig } from './modules/import.js';
 import { loadMDIData, getMdiData, getIconByCodepoint, searchIcons, searchIconsByCategory, getRecentIcons, addRecentIcon, getFavorites, toggleFavorite, isFavorite } from './modules/mdi.js';
+
+function escapeHTML(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function showToast(message, type = 'success', duration = 3000) {
   const container = document.getElementById('toast-container') || createToastContainer();
@@ -578,7 +587,11 @@ function generateYAML() {
       getBoardConfig,
       normalizeColor,
       clampNumber,
-      normalizeImportedConfig
+      normalizeImportedConfig,
+      yamlDoc,
+      yamlSecret,
+      yamlInclude,
+      yamlRaw
     });
 
     preview.innerHTML = YamlGenerationEngine.highlightYAML(yaml);
@@ -1338,7 +1351,11 @@ window.generateFullYAML = (config) => YamlGenerationEngine.generateFullYAML(conf
   defaultConfig: DEFAULT_CONFIG,
   normalizeColor,
   clampNumber,
-  normalizeImportedConfig
+  normalizeImportedConfig,
+  yamlDoc,
+  yamlSecret,
+  yamlInclude,
+  yamlRaw
 });
 window.validateConfig = (config) => ValidationEngine.validateConfig(config, { selectedButtonIndex, ACTION_SCHEMAS });
 

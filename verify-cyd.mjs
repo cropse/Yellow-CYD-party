@@ -48,6 +48,7 @@ const sharedCtx = {
     querySelector(){ return nullEl(); },
     querySelectorAll(){ return []; },
     createElement: nullEl,
+    createTextNode(){ return nullEl(); },
     addEventListener(){},
     removeEventListener(){},
     body: { appendChild(){}, removeChild(){}, hasAttribute(){ return false; }, setAttribute(){} }
@@ -242,6 +243,19 @@ if (!yaml.includes('btn_logic_9')) {
 }
 if (!yaml.includes('!secret api_encryption_key') || !yaml.includes('!secret wifi_ssid')) {
   throw new Error('secret placeholders missing');
+}
+
+// Test parity: generated YAML must match back-garden-cyd.yaml reference
+const refPath = path.join(__dirname, 'back-garden-cyd.yaml');
+const refYaml = fs.readFileSync(refPath, 'utf8');
+if (yaml !== refYaml) {
+  const refLines = refYaml.split('\n');
+  const genLines = yaml.split('\n');
+  for (let i = 0; i < Math.max(refLines.length, genLines.length); i++) {
+    if (refLines[i] !== genLines[i]) {
+      throw new Error(`YAML parity mismatch at line ${i + 1}: ref="${refLines[i]}" gen="${genLines[i]}"`);
+    }
+  }
 }
 
 // Test LED control generation with global led enabled

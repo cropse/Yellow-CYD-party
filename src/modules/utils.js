@@ -97,11 +97,69 @@ export function isPlainYAMLObject(value) {
   });
 }
 
-export function escapeHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+import YamlPkg from 'yaml';
+const {stringify: yamlStringify} = YamlPkg;
+
+const RAW_START = 'YAMLRAWSTART';
+const RAW_END = 'YAMLRAWEND';
+
+// Sentinel marker for raw-pass-through values that must not be quoted.
+// After yamlStringify(), this sentinel is stripped from the output.
+
+// yamlSecret('api_encryption_key') → renders as !secret api_encryption_key
+export function yamlSecret(name) {
+  return `${RAW_START}!secret ${name}${RAW_END}`;
 }
+
+// yamlInclude('path/to/template.yaml') → renders as !include path...
+export function yamlInclude(path) {
+  return `${RAW_START}!include ${path}${RAW_END}`;
+}
+
+// yamlRaw('...') → renders as-is, no quoting
+// Used for ${device_name}, !lambda, multiline, etc.
+export function yamlRaw(str) {
+  if (typeof str !== 'string') return str;
+  return `${RAW_START}${str}${RAW_END}`;
+}
+
+// yamlDoc: array of {title, body} → joined YAML sections
+// body can be an object, an array of list items, or null (render as bare key)
+export function yamlDoc(sections) {
+  const parts = [];
+  for (const s of sections) {
+    if (!s || (s.body === undefined && s.list === undefined)) continue;
+    if (s.body === null) {
+      parts.push(`${s.title}:\n`);
+      continue;
+    }
+    if (typeof s.body === 'string' && s.body.startsWith(RAW_START) && s.body.endsWith(RAW_END)) {
+      const rawBody = s.body.slice(RAW_START.length, -RAW_END.length);
+      parts.push(`${s.title}:\n${rawBody.replace(/\n+$/, '')}\n`);
+      continue;
+    }
+
+    let obj;
+    if (s.list !== undefined) {
+      obj = {[s.title]: s.list.filter(v => v != null)};
+    } else {
+      obj = {[s.title]: s.body};
+    }
+    let out = yamlStringify(obj, {indent: 2, lineWidth: 0});
+    // Strip sentinel markers (non-greedy, multiline-safe).
+    const raw = new RegExp(`${RAW_START}(.+?)${RAW_END}`, 'gs');
+    out = out.replace(raw, '$1');
+    // Convert ': null' to ':' for known bare-key ESPHome actions.
+    out = out.replace(/ (lvgl\.\w+(\.\w+)*|light\.\w+): null$/gm, ' $1:');
+    out = out.replace(/-( (lvgl\.\w+(\.\w+)*)| logger\.log): null$/gm, '- $1:');
+    parts.push(out.replace(/\n+$/, '\n'));
+  }
+  return parts.join('\n');
+}
+
+
+
+// Debounce: delays execution until `wait` ms have passed since the last call.
 
 // Debounce: delays execution until `wait` ms have passed since the last call.
 // Optionally flush on the first call (leading) and cancel prior pending invocations.

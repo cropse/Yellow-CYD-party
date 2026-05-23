@@ -120,16 +120,30 @@ describe('BOARD_CONFIGS', () => {
     assert.strictEqual(b.hardware.backlight.pin, 'GPIO27');
   });
 
-  it('guition-jc4827543c has nv3041a display, gt911 touch, NO rgbLed', () => {
+  it('guition-jc4827543c has qspi_dbi display, gt911 touch, NO rgbLed', () => {
     const b = BOARD_CONFIGS['guition-jc4827543c'];
-    assert.strictEqual(b.hardware.display.driver, 'nv3041a');
+    assert.strictEqual(b.hardware.display.driver, 'qspi_dbi');
+    assert.strictEqual(b.hardware.display.model, 'CUSTOM');
+    assert.strictEqual(b.hardware.display.data_rate, '20MHz');
+    assert.strictEqual(b.hardware.display.rotation, 180);
+    assert.ok(Array.isArray(b.hardware.display.init_sequence));
+    assert.ok(b.hardware.display.init_sequence.length > 80);
     assert.strictEqual(b.capabilities.rgbLed, false);
     assert.strictEqual(b.hardware.rgbLed, undefined);
     assert.strictEqual(b.hardware.touch.driver, 'gt911');
+    assert.strictEqual(b.hardware.touch.i2c.id, 'bus_a');
     assert.strictEqual(b.hardware.touch.i2c.sda, 'GPIO8');
+    assert.strictEqual(b.hardware.touch.i2c.interrupt.number, 'GPIO3');
+    assert.strictEqual(b.hardware.touch.i2c.interrupt.ignore_strapping_warning, true);
     assert.strictEqual(b.hardware.esp32.board, 'esp32-s3-devkitc-1');
+    assert.strictEqual(b.hardware.esp32.variant, 'esp32s3');
+    assert.strictEqual(b.hardware.esp32.flash_size, '4MB');
     assert.strictEqual(b.hardware.esp32.framework, 'esp-idf');
     assert.strictEqual(b.hardware.esp32.psram, 'octal 80MHz');
+    assert.strictEqual(b.hardware.esp32.platformio_options['board_build.flash_mode'], 'dio');
+    assert.strictEqual(b.hardware.display.qspi.cs.number, 'GPIO45');
+    assert.strictEqual(b.hardware.display.qspi.cs.ignore_strapping_warning, true);
+    assert.strictEqual(b.hardware.display.qspi.spi_id, 'quad_spi');
     assert.strictEqual(b.width, 480);
     assert.strictEqual(b.height, 272);
   });

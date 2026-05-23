@@ -138,7 +138,7 @@ font:
     bpp: 2
     size: 12
     glyphs:
-      - "0123456789 /%'"
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -148,7 +148,7 @@ font:
     size: 14
     bpp: 2
     glyphs:
-      - "0123456789 "
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -159,7 +159,7 @@ font:
     bpp: 2
     size: 16
     glyphs:
-      - "0123456789 /"
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file: ${font_directory}materialdesignicons-webfont.ttf
@@ -181,6 +181,9 @@ font:
       - "\U000F1A5C"
       - "\U000F17C9"
       - "\U000F091D"
+      - "\U000F1503"
+      - "\U000F1855"
+      - "\U000F0E0A"
       - "\U000F1915"
       - "\U000F025A"
 
@@ -212,7 +215,7 @@ color:
   - id: btn_10_color
     hex: "FFFF00"
   - id: btn_11_color
-    hex: "FFFF00"
+    hex: "00BFFF"
   - id: btn_12_color
     hex: "FB852B"
 
@@ -379,7 +382,9 @@ binary_sensor:
         then:
           - logger.log: "Button 11 short click"
           - homeassistant.action:
-              action: script.toggle_living_room
+              action: switch.toggle
+              data:
+                entity_id: switch.studio_balcony_versatile_esp32_switch_2
   - platform: lvgl
     widget: btn_12
     name: "Button 12"
@@ -436,24 +441,6 @@ packages:
       on_state: "on"
       ico_on: "\U000F0402"
       ico_off: "\U000F1A5C"
-  led_sync_9:
-    text_sensor:
-      - platform: homeassistant
-        id: ts_led_btn_9
-        entity_id: switch.virtual_pill_alert
-        on_value:
-          then:
-            - if:
-                condition:
-                  lambda: 'return x == "on";'
-                then:
-                  - light.turn_on:
-                      id: led
-                      red: 0%
-                      green: 100%
-                      blue: 0%
-                else:
-                  - light.turn_off: led
   btn_logic_10: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -467,11 +454,11 @@ packages:
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
       ts_id: ts_btn_11
-      ha_entity: switch.sonoff_10010ff602_2
+      ha_entity: switch.studio_balcony_versatile_esp32_switch_2
       btn_id: btn_11
       on_state: "on"
-      ico_on: "\U000F091D"
-      ico_off: "\U000F17C9"
+      ico_on: "\U000F1855"
+      ico_off: "\U000F0E0A"
   btn_logic_12: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -481,6 +468,25 @@ packages:
       on_state: "on"
       ico_on: "\U000F025A"
       ico_off: "\U000F1915"
+  led_sync:
+    text_sensor:
+      - platform: homeassistant
+        id: ts_led_global
+        entity_id: switch.virtual_pill_alert
+        on_value:
+          then:
+            - if:
+                condition:
+                  lambda: 'return x == "on";'
+                then:
+                  - light.turn_on:
+                      id: led
+                      red: 0%
+                      green: 100%
+                      blue: 0%
+                      brightness: 100%
+                else:
+                  - light.turn_off: led
 
 lvgl:
   on_idle:
@@ -525,122 +531,113 @@ lvgl:
             outline_pad: 5px
             widgets:
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget.yaml
-                  vars:
-                    id: btn_1
-                    col: 0
-                    row: 0
-                    color: btn_1_color
-                    icon: "\U000F1B94"
-                    font: roboto_16
-                    label: "Sleep"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_1
+                     col: 0
+                     row: 0
+                     color: btn_1_color
+                     icon: "\U000F1B94"
+                     font: roboto_16
+                     label: "Sleep"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget.yaml
-                  vars:
-                    id: btn_2
-                    col: 1
-                    row: 0
-                    color: btn_2_color
-                    icon: "\U000F0583"
-                    font: roboto_16
-                    label: "Outside"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_2
+                     col: 1
+                     row: 0
+                     color: btn_2_color
+                     icon: "\U000F0583"
+                     font: roboto_16
+                     label: "Outside"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_3
-                    col: 2
-                    row: 0
-                    color: 0xFFFF00
-                    icon: "\U000F059C"
-                    font: roboto_16
-                    label: "I'm wake"
+                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                   vars:
+                     id: btn_3
+                     col: 2
+                     row: 0
+                     color: 0xFFFF00
+                     icon: "\U000F059C"
+                     label: "I'm wake"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_4
-                    col: 3
-                    row: 0
-                    color: 0x00FF00
-                    icon: "\U000F040E"
-                    font: roboto_16
-                    label: "Play/Pause"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_4
+                     col: 3
+                     row: 0
+                     color: btn_4_color
+                     icon: "\U000F040E"
+                     label: "Play/Pause"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget.yaml
-                  vars:
-                    id: btn_5
-                    col: 0
-                    row: 1
-                    color: btn_5_color
-                    icon: "\U000F032A"
-                    font: roboto_16
-                    label: "Back Garden"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_5
+                     col: 0
+                     row: 1
+                     color: btn_5_color
+                     icon: "\U000F032A"
+                     label: "Back Garden"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget.yaml
-                  vars:
-                    id: btn_6
-                    col: 1
-                    row: 1
-                    color: btn_6_color
-                    icon: "\U000F024A"
-                    font: roboto_16
-                    label: "Studio Garden"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_6
+                     col: 1
+                     row: 1
+                     color: btn_6_color
+                     icon: "\U000F024A"
+                     label: "Studio Garden"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget.yaml
-                  vars:
-                    id: btn_7
-                    col: 2
-                    row: 1
-                    color: btn_7_color
-                    icon: "\U000F1846"
-                    font: roboto_16
-                    label: "Curtain 30%"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_7
+                     col: 2
+                     row: 1
+                     color: btn_7_color
+                     icon: "\U000F1846"
+                     label: "Curtain 30%"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_8
-                    col: 3
-                    row: 1
-                    color: 0x00FFFF
-                    icon: "\U000F1847"
-                    font: roboto_16
-                    label: "Curtain"
+                   file: cyd-lib/templates/cyd_button_widget.yaml
+                   vars:
+                     id: btn_8
+                     col: 3
+                     row: 1
+                     color: btn_8_color
+                     icon: "\U000F1847"
+                     label: "Curtain"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_9
-                    col: 0
-                    row: 2
-                    color: 0x00FF00
-                    icon: "\U000F0402"
-                    font: roboto_16
-                    label: "Pill alert"
+                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                   vars:
+                     id: btn_9
+                     col: 0
+                     row: 2
+                     color: 0x00FF00
+                     icon: "\U000F0402"
+                     label: "Pill alert"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_10
-                    col: 1
-                    row: 2
-                    color: 0xFFFF00
-                    icon: "\U000F17C9"
-                    font: roboto_16
-                    label: "Studio"
+                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                   vars:
+                     id: btn_10
+                     col: 1
+                     row: 2
+                     color: 0xFFFF00
+                     icon: "\U000F17C9"
+                     font: roboto_16
+                     label: "Studio"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_11
-                    col: 2
-                    row: 2
-                    color: 0xFFFF00
-                    icon: "\U000F17C9"
-                    font: roboto_16
-                    label: "Living"
+                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                   vars:
+                     id: btn_11
+                     col: 2
+                     row: 2
+                     color: 0x00BFFF
+                     icon: "\U000F1503"
+                     label: "Living"
               - <<: !include
-                  file: cyd-lib/templates/cyd_button_widget_checkable.yaml
-                  vars:
-                    id: btn_12
-                    col: 3
-                    row: 2
-                    color: 0xFB852B
-                    icon: "\U000F1915"
-                    font: roboto_16
-                    label: "Eat"
+                   file: cyd-lib/templates/cyd_button_widget_checkable.yaml
+                   vars:
+                     id: btn_12
+                     col: 3
+                     row: 2
+                     color: 0xFB852B
+                     icon: "\U000F1915"
+                     label: "Eat"

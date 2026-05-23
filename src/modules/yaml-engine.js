@@ -154,10 +154,10 @@ const FALLBACK_BOARD_CONFIGS = {
     height: 272,
     capabilities: { rgbLed: false },
     hardware: {
-      esp32: { board: 'esp32-s3-devkitc-1', framework: 'esp-idf', psram: 'octal 80MHz' },
-      display: { driver: 'nv3041a', qspi: { clk: 'GPIO47', d0: 'GPIO21', d1: 'GPIO48', d2: 'GPIO40', d3: 'GPIO39', cs: 'GPIO45' }, invert_colors: true },
-      touch: { driver: 'gt911', i2c: { sda: 'GPIO8', scl: 'GPIO4', interrupt: 'GPIO3', reset: 'GPIO38' }, transform: { mirror_x: true, mirror_y: true } },
-      backlight: { pin: 'GPIO1' }
+      esp32: { board: 'esp32-s3-devkitc-1', variant: 'esp32s3', flash_size: '4MB', framework: 'esp-idf', psram: 'octal 80MHz', platformio_options: { 'board_build.flash_mode': 'dio' } },
+      display: { driver: 'qspi_dbi', model: 'CUSTOM', qspi: { clk: 'GPIO47', d0: 'GPIO21', d1: 'GPIO48', d2: 'GPIO40', d3: 'GPIO39', cs: { number: 'GPIO45', ignore_strapping_warning: true }, spi_id: 'quad_spi' }, data_rate: '20MHz', invert_colors: true, rotation: 0, init_sequence: [] },
+      touch: { driver: 'gt911', i2c: { id: 'bus_a', sda: 'GPIO8', scl: 'GPIO4', interrupt: { number: 'GPIO3', ignore_strapping_warning: true }, reset: 'GPIO38' }, transform: { mirror_x: true, mirror_y: true } },
+      backlight: { pin: 'GPIO1', frequency: '1000Hz' }
     }
   }
 };
@@ -202,16 +202,21 @@ function pinBlock(pin, indent = 4) {
   return `${spaces}${pinValue(pin)}`;
 }
 
-function generateCoreHardwareConfig(esp32) {
+function generateCoreHardwareConfig(esp32, esphomeOpts = {}) {
+  const variant = esp32.variant ? `\n  variant: ${esp32.variant}` : '';
+  const flashSize = esp32.flash_size ? `\n  flash_size: ${esp32.flash_size}` : '';
   const psram = esp32.psram ? `\n\npsram:\n  mode: ${esp32.psram.split(' ')[0]}\n  speed: ${esp32.psram.split(' ')[1] || '80MHz'}` : '';
+  const pioOpts = esphomeOpts.platformio_options ? Object.entries(esphomeOpts.platformio_options).map(([k, v]) => `\n    ${k}: ${v}`).join('') : '';
+  const platformio = pioOpts ? `\n  platformio_options:${pioOpts}` : '';
+  const onBoot = esphomeOpts.on_boot ? `\n  on_boot:${esphomeOpts.on_boot}` : '';
   return `esp32:
-  board: ${esp32.board}
+  board: ${esp32.board}${variant}${flashSize}
   framework:
     type: ${esp32.framework}${psram}
 
 esphome:
   name: \${device_name}
-  friendly_name: \${nice_name}
+  friendly_name: \${nice_name}${platformio}${onBoot}
 
 api:
   encryption:
@@ -301,7 +306,8 @@ spi:
     mosi_pin: 32
     miso_pin: 39`;
 
-  return `${generateCoreHardwareConfig(hardware.esp32)}
+  const esphomeOpts = hardware.esp32.platformio_options ? { platformio_options: hardware.esp32.platformio_options } : {};
+  return `${generateCoreHardwareConfig(hardware.esp32, esphomeOpts)}
 
 ${spiSection}
 
@@ -358,58 +364,73 @@ function generateGuitionHardwareConfig(boardConfig) {
   const hardware = boardConfig.hardware;
   const qspi = hardware.display.qspi;
   const touch = hardware.touch;
-  return `${generateCoreHardwareConfig(hardware.esp32)}
+  const esphomeOpts = hardware.esp32.platformio_options ? { platformio_options: hardware.esp32.platformio_options } : {};
+  const displayModel = hardware.display.model ? `\n    model: ${hardware.display.model}` : '';
+  const dataRate = hardware.display.data_rate ? `\n    data_rate: ${hardware.display.data_rate}` : '';
+  const rotation = hardware.display.rotation !== undefined ? `\n    rotation: ${hardware.display.rotation}` : '';
+  const initSeq = hardware.display.init_sequence && hardware.display.init_sequence.length ? `\n    init_sequence:\n${hardware.display.init_sequence.map(b => {
+    const arr = Array.isArray(b) ? b : [b];
+    return `      - [${arr.map(v => '0x' + v.toString(16).padStart(2, '0')).join(', ')}]`;
+  }).join('\n')}` : '';
+  const i2cId = touch.i2c.id ? `\n    i2c_id: ${touch.i2c.id}` : '';
+  const backlightFreq = hardware.backlight.frequency ? `\n    frequency: ${hardware.backlight.frequency}` : '';
+  const displayTransform = hardware.display.transform ? `\n    transform:\n${Object.entries(hardware.display.transform).map(([k, v]) => `      ${k}: ${v}`).join('\n')}` : '';
+  esphomeOpts.on_boot = `\n    - priority: -100\n      then:\n        - component.update: main_display`;
+
+  return `${generateCoreHardwareConfig(hardware.esp32, esphomeOpts)}
 
 i2c:
-  - sda: ${pinValue(touch.i2c.sda)}
+  - id: ${touch.i2c.id || 'bus_a'}
+    sda: ${pinValue(touch.i2c.sda)}
     scl: ${pinValue(touch.i2c.scl)}
     scan: true
+
+spi:
+  - id: ${qspi.spi_id}
+    type: quad
+    clk_pin: ${pinValue(qspi.clk)}
+    data_pins:
+      - ${pinValue(qspi.d0)}
+      - ${pinValue(qspi.d1)}
+      - ${pinValue(qspi.d2)}
+      - ${pinValue(qspi.d3)}
 
 output:
   - id: backlight_pwm
     platform: ledc
-    pin: ${pinValue(hardware.backlight.pin)}
+    pin: ${pinValue(hardware.backlight.pin)}${backlightFreq}
 
 ${generateLightSection(false)}
 
 display:
   - id: main_display
     platform: ${hardware.display.driver}
-    reset_pin: GPIO48
-    enable_pin: GPIO45
+    spi_id: ${qspi.spi_id}
     invert_colors: ${hardware.display.invert_colors}
     update_interval: never
     auto_clear_enabled: false
     dimensions:
       width: \${width}
-      height: \${height}
-    transform:
-      mirror_x: true
-    quad_spi:
-      clk_pin: ${qspi.clk}
-      data_pins:
-        - ${qspi.d0}
-        - ${qspi.d1}
-        - ${qspi.d2}
-        - ${qspi.d3}
-      cs_pin: ${qspi.cs}
+      height: \${height}${displayTransform}${displayModel}${dataRate}${rotation}${initSeq}
+    cs_pin:${qspi.cs && typeof qspi.cs === 'object' ? `\n${pinBlock(qspi.cs, 6)}` : ` ${pinValue(qspi.cs)}`}
 
 touchscreen:
   - id: main_touchscreen
-    platform: gt911
-    interrupt_pin: ${touch.i2c.interrupt}
+    platform: gt911${i2cId}
+    interrupt_pin:${touch.i2c.interrupt && typeof touch.i2c.interrupt === 'object' ? `\n${pinBlock(touch.i2c.interrupt, 6)}` : ` ${pinValue(touch.i2c.interrupt)}`}
     reset_pin: ${touch.i2c.reset}
     transform:
       mirror_x: ${touch.transform?.mirror_x === true}
       mirror_y: ${touch.transform?.mirror_y === true}
-    on_release:
-      - if:
-          condition: lvgl.is_paused
-          then:
-            - logger.log: "LVGL resuming"
-            - lvgl.resume:
-            - lvgl.widget.redraw:
-            - light.turn_on: display_backlight`;
+    on_touch:
+      then:
+        - if:
+            condition: lvgl.is_paused
+            then:
+              - logger.log: "LVGL resuming"
+              - lvgl.resume:
+              - lvgl.widget.redraw:
+              - light.turn_on: display_backlight`;
 }
 
 export function generateHardwareConfig(boardConfig, config, deps) {
@@ -434,8 +455,7 @@ export function generateFontSection(buttons, deps) {
     bpp: 2
     size: 12
     glyphs:
-      - "0123456789 /%'"
-      - ":"
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -445,7 +465,7 @@ export function generateFontSection(buttons, deps) {
     size: 14
     bpp: 2
     glyphs:
-      - "0123456789 "
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -456,7 +476,7 @@ export function generateFontSection(buttons, deps) {
     bpp: 2
     size: 16
     glyphs:
-      - "0123456789 /"
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file: \${font_directory}materialdesignicons-webfont.ttf
@@ -560,13 +580,18 @@ export function generatePackages(buttons, deps) {
   const { yamlScalar, yamlQuoted } = deps;
   const packages = [];
 
-  buttons.forEach((btn, i) => {
-    if (btn.type !== 'checkable' || !String(btn.haEntity || '').trim()) return;
+  // Support config object with .buttons for backward compatibility
+  const isArray = Array.isArray(buttons);
+  const config = deps.config || (isArray ? {} : buttons) || {};
+  const btnList = isArray ? buttons : (buttons?.buttons || []);
+
+  btnList.forEach((btn, i) => {
+    if (!['checkable', 'timer_sync'].includes(btn.type) || !String(btn.haEntity || '').trim()) return;
 
     const escapedState = String(btn.onState || 'on').replace(/"/g, '\\"');
 
-    if (btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim()) {
-      const timerLabel = btn.timerDefaultLabel.replace(/"/g, '\\"');
+    if (btn.type === 'timer_sync' || (btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim())) {
+      const timerLabel = (btn.timerDefaultLabel || btn.label || '').replace(/"/g, '\\"');
       packages.push(`  btn_timer_${i + 1}: !include
     file: cyd-lib/templates/timer_sync_template.yaml
     vars:
@@ -610,6 +635,36 @@ export function generatePackages(buttons, deps) {
                   - light.turn_off: led`);
     }
   });
+
+  const boardHasRgb = !deps.boardConfig || deps.boardConfig.capabilities?.rgbLed === true;
+  if (boardHasRgb && config.led?.enabled && config.led.effect === 'on-entity' && String(config.led.entity || '').trim()) {
+    const led = config.led;
+    const onState = String(led.onState || 'on').replace(/"/g, '\\"');
+    const color = led.color || {};
+    const red = Math.round((color.r || 0) / 255 * 100);
+    const green = Math.round((color.g || 255) / 255 * 100);
+    const blue = Math.round((color.b || 0) / 255 * 100);
+    const brightness = Math.max(0, Math.min(100, Math.round(led.brightness || 100)));
+    packages.push(`  led_sync:
+    text_sensor:
+      - platform: homeassistant
+        id: ts_led_global
+        entity_id: ${yamlScalar(led.entity)}
+        on_value:
+          then:
+            - if:
+                condition:
+                  lambda: 'return x == "${onState}";'
+                then:
+                  - light.turn_on:
+                      id: led
+                      red: ${red}%
+                      green: ${green}%
+                      blue: ${blue}%
+                      brightness: ${brightness}%
+                else:
+                  - light.turn_off: led`);
+  }
 
   if (packages.length === 0) return '';
   return `packages:\n${packages.join('\n')}`;
@@ -662,7 +717,7 @@ function calculateLVGLLayoutScale(boardConfig) {
   const width = Number(boardConfig?.width) || 320;
   const height = Number(boardConfig?.height) || 240;
   const scale = Math.min(width / 320, height / 240);
-  const gap = Math.max(4, Math.round(scale * 4));
+  const gap = Math.max(5, Math.round(scale * 5));
 
   return {
     gap,
@@ -732,7 +787,8 @@ export function generateFullYAML(config, deps) {
     ...deps,
     yamlScalar,
     yamlQuoted,
-    boardConfig
+    boardConfig,
+    config: normalizedConfig
   };
 
   const parts = [
