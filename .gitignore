@@ -1,3 +1,4 @@
 esphome/
 node_modules/
 dist/
+.sisyphus/

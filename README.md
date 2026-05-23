@@ -2,6 +2,8 @@
 
 A web-based tool for generating ESPHome YAML configurations for CYD (Cheap Yellow Display - ESP32-2432S028R) devices.
 
+**Live: https://cropse.github.io/Yellow-CYD-party/**
+
 ![CYD Config Generator](https://img.shields.io/badge/Platform-GitHub%20Pages-blue)
 ![ESPHome](https://img.shields.io/badge/ESPHome-2024.6%2B-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -104,7 +106,7 @@ A button that syncs its state with a Home Assistant entity:
 5. Select folder: `/ (root)`
 6. Save and wait for deployment
 
-The app will be available at `https://your-username.github.io/Yellow-CYD-party/`
+The app is live at **https://cropse.github.io/Yellow-CYD-party/**
 
 ### Local Usage
 
