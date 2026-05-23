@@ -1,7 +1,7 @@
 # AGENTS.md — Yellow-CYD-party
 
 > Compact guidance for OpenCode agents working in this repo.
-> Last updated: 2026-05-01
+> Last updated: 2026-05-23
 
 ## What this repo is
 
@@ -17,27 +17,22 @@ A Vite-based web app that generates ESPHome YAML configurations for CYD (Cheap Y
 
 | File | Role |
 |---|---|
-| `src/main.js` | Entry point (~900 lines). Initializes app, sets up event listeners, orchestrates modules. |
-| `src/styles/main.css` | All CSS (~1400 lines). Extracted from original `index.html`. |
-| `src/modules/config.js` | Constants: `DEFAULT_BUTTON`, `DEFAULT_CONFIG`, `ACTION_SCHEMAS`, `PRESETS`, `HARDWARE_CONFIG` (~450 lines) |
-| `src/modules/store.js` | State management with undo/redo (~130 lines) |
-| `src/modules/yaml-engine.js` | YAML generation functions (~540 lines) |
-| `src/modules/validation-engine.js` | Config validation (~170 lines) |
-| `src/modules/utils.js` | Utility functions: `normalizeColor`, `clampNumber`, `escapeHTML`, etc. (~100 lines) |
-| `src/modules/import.js` | Import/normalize config logic (~100 lines) |
-| `src/modules/mdi.js` | MDI icon loading and search (~90 lines) |
-| `src/modules/ui-render.js` | UI render functions (~330 lines) |
-| `src/modules/events.js` | Event handlers (~280 lines) |
-| `src/modules/actions.js` | User actions: export, import, download, etc. (~200 lines) |
-| `src/modules/state.js` | Global state and store initialization (~50 lines) |
-| `src/modules/toast.js` | Toast notification system (~35 lines) |
+| `src/main.js` | Entry point (~1360 lines). Initializes app, sets up event listeners, orchestrates modules, exports to `window` for testing. |
+| `src/styles/main.css` | All CSS (~1700 lines). |
+| `src/modules/config.js` | Constants: `DEFAULT_BUTTON`, `DEFAULT_CONFIG`, `ACTION_SCHEMAS`, `PRESETS`, `BOARD_CONFIGS` (~688 lines) |
+| `src/modules/board-configs.js` | Board hardware definitions: `GUITION_NV3041A_INIT_SEQUENCE`, `HardwareType` (~20 lines) |
+| `src/modules/store.js` | State management with undo/redo (~132 lines) |
+| `src/modules/yaml-engine.js` | YAML generation functions (~847 lines) |
+| `src/modules/validation-engine.js` | Config validation (~181 lines) |
+| `src/modules/utils.js` | Utility functions: `normalizeColor`, `yamlDoc`, `debounce`, etc. (~219 lines) |
+| `src/modules/import.js` | Import/normalize config logic (~134 lines) |
+| `src/modules/mdi.js` | MDI icon loading and search (~174 lines) |
 
-### Source Files (`src/`)
+### Entry Point (`index.html`)
 
 | File | Role |
 |---|---|
-| `index.html` | Vite HTML entry point (~280 lines). |
-| `src/main.js` | Entry point (~940 lines). Initializes app, sets up event listeners, orchestrates modules. |
+| `index.html` | Vite HTML entry point (~510 lines). Contains app markup and a `<script type="module" src="/src/main.js">` tag. |
 
 ### Build Output (`dist/`)
 
@@ -62,11 +57,14 @@ npm run build
 # Preview production build locally
 npm run preview
 
-# Run tests (against original index.html)
-npm run test
+# Run integration tests (requires build first)
+npm test
 
-# Test icon preview fixes
+# Test icon codepoint logic
 node test-preview-fix.js
+
+# Run individual unit test
+node src/modules/tests/test-yaml.js
 ```
 
 ## Critical conventions
@@ -90,6 +88,7 @@ The generator produces **single-file, self-contained YAML** (no `!include` depen
 ### 4. Button types
 - `stateless` — simple press action
 - `checkable` — syncs with HA entity state, shows different ON/OFF icons
+- `timer_sync` — syncs with HA timer entity, shows default label when idle
 
 ### 5. Secrets
 All generated configs must use `!secret` placeholders for:
@@ -101,7 +100,7 @@ All generated configs must use `!secret` placeholders for:
 Never hardcode credentials in generated YAML.
 
 ### 6. Window exports for testing
-`src/main.js` exports key functions to `window` for backward compatibility with `verify-cyd.js`:
+`src/main.js` exports key functions to `window` for backward compatibility with `verify-cyd.mjs`:
 - `window.appState`
 - `window.DEFAULT_CONFIG`
 - `window.PRESETS`
@@ -117,7 +116,7 @@ Never hardcode credentials in generated YAML.
 Before considering generator changes complete:
 
 1. Run `npm run build` — ensure Vite build succeeds
-2. Run `npm run test` or `node verify-cyd.js` — validates:
+2. Run `npm test` — validates:
    - Preset generation (especially `back-garden` preset)
    - Required YAML blocks exist
    - Secret placeholders are present
@@ -136,7 +135,7 @@ Before considering generator changes complete:
 
 1. Run `npm run build`
 2. The `dist/` folder contains the production build
-3. Deploy `dist/` contents to GitHub Pages
+3. Deploy `dist/` contents to GitHub Pages (`.github/workflows/deploy.yml` handles this automatically on push to `main`)
 
 ## References
 
@@ -144,3 +143,4 @@ Before considering generator changes complete:
 - `README.md` — User-facing documentation.
 - `back-garden-cyd-test.yaml` — Golden reference for generated YAML structure.
 - `vite.config.js` — Vite configuration with chunk splitting.
+- `esphome/AGENTS.md` — ESPHome hardware config domain guidance.
