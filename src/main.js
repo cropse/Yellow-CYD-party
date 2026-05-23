@@ -1,5 +1,5 @@
 import './styles/main.css';
-import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHES, DEFAULT_BUTTON, DEFAULT_LED, BOARD_OPTIONS, DEFAULT_BOARD_ID, getBoardConfig, isSupportedBoard } from './modules/config.js';
+import { DEFAULT_CONFIG, PRESETS, HARDWARE_CONFIG, ACTION_SCHEMAS, COLOR_SWATCHES, DEFAULT_BUTTON, DEFAULT_LED, BOARD_OPTIONS, DEFAULT_BOARD_ID, getBoardConfig, isSupportedBoard, getAllowedGridOptions, getDefaultGridForBoard, isGridAllowedForBoard, getBoardSupportWarnings } from './modules/config.js';
 import { createStore } from './modules/store.js';
 import * as YamlGenerationEngine from './modules/yaml-engine.js';
 import * as ValidationEngine from './modules/validation-engine.js';
@@ -181,6 +181,7 @@ async function init() {
   renderColorThemePresets();
   renderColorSwatches();
   populateBoardSelector();
+  updateBoardSupportWarning(appState.board || DEFAULT_BOARD_ID);
   renderGridPreview();
   renderEditorPanel();
   updateGlobalSettings();
@@ -193,9 +194,123 @@ async function init() {
 
 let gridCellCache = null;
 
+function getGridDragButtonIndex(cell) {
+  if (!cell || cell.dataset.btnIndex === 'empty') return -1;
+  const index = Number.parseInt(cell.dataset.btnIndex, 10);
+  return Number.isInteger(index) ? index : -1;
+}
+
+function clearGridDragState() {
+  document.querySelectorAll('.grid-cell.dragging, .grid-cell.drag-over').forEach(cell => {
+    cell.classList.remove('dragging', 'drag-over');
+    cell.removeAttribute('aria-dropeffect');
+  });
+}
+
+function handleGridDragStart(e, btnIndex) {
+  if (btnIndex < 0) {
+    e.preventDefault();
+    return;
+  }
+
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(btnIndex));
+  e.currentTarget.classList.add('dragging');
+  e.currentTarget.setAttribute('aria-grabbed', 'true');
+}
+
+function handleGridDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function handleGridDragEnter(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+  e.currentTarget.setAttribute('aria-dropeffect', 'move');
+}
+
+function handleGridDragLeave(e) {
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  e.currentTarget.classList.remove('drag-over');
+  e.currentTarget.removeAttribute('aria-dropeffect');
+}
+
+function handleGridDrop(e) {
+  e.preventDefault();
+
+  const sourceIndex = Number.parseInt(e.dataTransfer.getData('text/plain'), 10);
+  const targetCell = e.currentTarget;
+  const targetCol = Number.parseInt(targetCell.dataset.col, 10);
+  const targetRow = Number.parseInt(targetCell.dataset.row, 10);
+
+  if (!Number.isInteger(sourceIndex) || !Number.isInteger(targetCol) || !Number.isInteger(targetRow)) {
+    clearGridDragState();
+    return;
+  }
+
+  const sourceButton = appState.buttons[sourceIndex];
+  if (!sourceButton || (sourceButton.col === targetCol && sourceButton.row === targetRow)) {
+    clearGridDragState();
+    return;
+  }
+
+  const targetIndex = getGridDragButtonIndex(targetCell);
+  store.update('Move grid button', state => {
+    const source = state.buttons[sourceIndex];
+    if (!source) return;
+
+    const sourceCol = source.col;
+    const sourceRow = source.row;
+    source.col = targetCol;
+    source.row = targetRow;
+
+    if (targetIndex >= 0 && targetIndex !== sourceIndex) {
+      const target = state.buttons[targetIndex];
+      if (target) {
+        target.col = sourceCol;
+        target.row = sourceRow;
+      }
+    }
+  });
+
+  selectButton(sourceIndex);
+  clearGridDragState();
+}
+
+function handleGridDragEnd(e) {
+  e.currentTarget.setAttribute('aria-grabbed', 'false');
+  clearGridDragState();
+}
+
+function applyGridDragAttributes(cell, btnIndex) {
+  const hasButton = btnIndex >= 0;
+  cell.draggable = hasButton;
+  cell.setAttribute('aria-grabbed', 'false');
+  cell.setAttribute('aria-dropeffect', 'move');
+}
+
+function attachGridDragListeners(cell, btnIndex) {
+  cell.addEventListener('dragstart', (e) => handleGridDragStart(e, btnIndex));
+  cell.addEventListener('dragover', handleGridDragOver);
+  cell.addEventListener('dragenter', handleGridDragEnter);
+  cell.addEventListener('dragleave', handleGridDragLeave);
+  cell.addEventListener('drop', handleGridDrop);
+  cell.addEventListener('dragend', handleGridDragEnd);
+}
+
 function renderGridPreview() {
   const container = document.getElementById('grid-preview');
   if (!container) return;
+
+  const gridColumns = appState.gridColumns || DEFAULT_CONFIG.gridColumns;
+  const gridRows = appState.gridRows || DEFAULT_CONFIG.gridRows;
+  const iconSize = appState.iconSize || DEFAULT_CONFIG.iconSize;
+  if (typeof container.style?.setProperty === 'function') {
+    container.style.setProperty('--grid-columns', gridColumns);
+    container.style.setProperty('--grid-rows', gridRows);
+    container.style.setProperty('--icon-size', `${iconSize}px`);
+  }
 
   const positionMap = new Map();
   appState.buttons.forEach((btn, idx) => {
@@ -204,68 +319,87 @@ function renderGridPreview() {
     positionMap.get(key).push(idx);
   });
 
-  const hasPositionChanges = appState.buttons.some((btn, i) => {
-    const cached = gridCellCache?.[i];
-    return !cached || cached.col !== btn.col || cached.row !== btn.row;
-  });
+  const expectedCellCount = gridColumns * gridRows;
+  const hasGridChanges = container.children.length !== expectedCellCount
+    || gridCellCache?.gridColumns !== gridColumns
+    || gridCellCache?.gridRows !== gridRows
+    || gridCellCache?.buttonCount !== appState.buttons.length;
 
-  const needsFullRebuild = !gridCellCache || hasPositionChanges;
+  const needsFullRebuild = !gridCellCache || hasGridChanges;
+  if (needsFullRebuild) {
+    container.innerHTML = '';
+    gridCellCache = new Array(appState.buttons.length);
+    gridCellCache.gridColumns = gridColumns;
+    gridCellCache.gridRows = gridRows;
+    gridCellCache.buttonCount = appState.buttons.length;
+  }
 
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 4; col++) {
+  const createGridCell = (col, row, btnIndex, hasConflict) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.dataset.col = col;
+    cell.dataset.row = row;
+    cell.dataset.btnIndex = btnIndex >= 0 ? String(btnIndex) : 'empty';
+
+    if (btnIndex >= 0) {
+      const btn = appState.buttons[btnIndex];
+      const iconData = getIconByCodepoint(btn.icon);
+
+      cell.innerHTML = `
+        <span class="position-badge">${col + 1},${row + 1}</span>
+        <span class="icon" style="font-family: 'Material Design Icons'; font-size: ${appState.iconSize || 48}px; color: #${btn.color};">${iconData?.char || ''}</span>
+        <span class="label">${escapeHTML(btn.label)}</span>
+      `;
+
+      if (btnIndex === selectedButtonIndex) cell.classList.add('selected');
+      if (hasConflict) cell.classList.add('position-conflict');
+
+      cell.addEventListener('click', () => selectButton(btnIndex));
+      cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
+      attachGridDragListeners(cell, btnIndex);
+      applyGridDragAttributes(cell, btnIndex);
+      cell.tabIndex = 0;
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('aria-label', `Edit ${btn.label}`);
+    } else {
+      cell.innerHTML = `
+        <span class="position-badge">${col + 1},${row + 1}</span>
+        <span class="label text-muted">Empty</span>
+      `;
+      cell.classList.add('empty');
+      applyGridDragAttributes(cell, btnIndex);
+      cell.tabIndex = -1;
+      cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
+      attachGridDragListeners(cell, btnIndex);
+    }
+
+    return cell;
+  };
+
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridColumns; col++) {
+      const slotIndex = row * gridColumns + col;
       const btnIndex = appState.buttons.findIndex(b => b.col === col && b.row === row);
       const hasConflict = positionMap.get(`${col},${row}`)?.length > 1;
 
-      let cell = container.querySelector(`[data-col="${col}"][data-row="${row}"]`);
+      let cell = container.children[slotIndex];
+      const cellMatchesSlot = cell?.dataset.col === String(col) && cell?.dataset.row === String(row);
+      const expectedBtnIndex = btnIndex >= 0 ? String(btnIndex) : 'empty';
 
-      if (needsFullRebuild || !cell || (cell.dataset.btnIndex !== String(btnIndex))) {
-        if (cell) container.removeChild(cell);
-        cell = document.createElement('div');
-        cell.className = 'grid-cell';
-        cell.dataset.col = col;
-        cell.dataset.row = row;
-        cell.dataset.btnIndex = btnIndex >= 0 ? String(btnIndex) : 'empty';
-
-        const attachListeners = () => {
-          cell.addEventListener('click', () => selectButton(btnIndex));
-          cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
-        };
-
-        if (btnIndex >= 0) {
-          const btn = appState.buttons[btnIndex];
-          const iconData = getIconByCodepoint(btn.icon);
-
-          cell.innerHTML = `
-            <span class="position-badge">${col + 1},${row + 1}</span>
-            <span class="icon" style="font-family: 'Material Design Icons'; font-size: ${btn.font === 'roboto_12' ? '18px' : btn.font === 'arimo14' ? '20px' : '22px'}; color: #${btn.color};">${iconData?.char || ''}</span>
-            <span class="label">${escapeHTML(btn.label)}</span>
-          `;
-
-          if (btnIndex === selectedButtonIndex) cell.classList.add('selected');
-          if (hasConflict) cell.classList.add('position-conflict');
-
-          attachListeners();
-          cell.tabIndex = 0;
-          cell.setAttribute('role', 'button');
-          cell.setAttribute('aria-label', `Edit ${btn.label}`);
-        } else {
-          cell.innerHTML = `
-            <span class="position-badge">${col + 1},${row + 1}</span>
-            <span class="label text-muted">Empty</span>
-          `;
-          cell.classList.add('empty');
-          cell.tabIndex = -1;
-        }
-
+      if (needsFullRebuild || !cell || !cellMatchesSlot) {
+        cell = createGridCell(col, row, btnIndex, hasConflict);
         container.appendChild(cell);
+      } else if (cell.dataset.btnIndex !== expectedBtnIndex) {
+        const replacement = createGridCell(col, row, btnIndex, hasConflict);
+        cell.replaceWith(replacement);
+        cell = replacement;
       } else if (btnIndex >= 0) {
-        // Cell exists and button hasn't moved — update content in place.
         const btn = appState.buttons[btnIndex];
         const iconData = getIconByCodepoint(btn.icon);
-        const fontSize = btn.font === 'roboto_12' ? '18px' : btn.font === 'arimo14' ? '20px' : '22px';
+        const iconSize = appState.iconSize || 48;
         const iconSpan = cell.querySelector('.icon');
         if (iconSpan) {
-          iconSpan.style.fontSize = fontSize;
+          iconSpan.style.fontSize = `${iconSize}px`;
           iconSpan.style.color = `#${btn.color}`;
           iconSpan.textContent = iconData?.char || '';
         }
@@ -273,14 +407,21 @@ function renderGridPreview() {
         if (labelSpan) labelSpan.textContent = btn.label;
         cell.classList.toggle('selected', btnIndex === selectedButtonIndex);
         cell.classList.toggle('position-conflict', !!hasConflict);
+        cell.classList.remove('empty');
+        applyGridDragAttributes(cell, btnIndex);
         cell.setAttribute('aria-label', `Edit ${btn.label}`);
+        if (cell.dataset.btnIndex !== String(btnIndex)) {
+          cell.dataset.btnIndex = String(btnIndex);
+          cell.onclick = () => selectButton(btnIndex);
+        }
       } else {
         cell.classList.toggle('selected', false);
         cell.classList.toggle('position-conflict', !!hasConflict);
+        cell.classList.add('empty');
+        applyGridDragAttributes(cell, btnIndex);
       }
 
       if (btnIndex >= 0) {
-        if (!gridCellCache) gridCellCache = new Array(12);
         gridCellCache[btnIndex] = { col, row };
       }
     }
@@ -299,12 +440,12 @@ function handleGridKeydown(e, col, row, btnIndex) {
   if (!delta) return;
   
   e.preventDefault();
-  const newCol = Math.max(0, Math.min(3, col + delta[0]));
-  const newRow = Math.max(0, Math.min(2, row + delta[1]));
+  const maxCol = (appState.gridColumns || DEFAULT_CONFIG.gridColumns) - 1;
+  const maxRow = (appState.gridRows || DEFAULT_CONFIG.gridRows) - 1;
+  const newCol = Math.max(0, Math.min(maxCol, col + delta[0]));
+  const newRow = Math.max(0, Math.min(maxRow, row + delta[1]));
   
-  const cells = document.querySelectorAll('.grid-cell');
-  const targetIndex = newRow * 4 + newCol;
-  const targetCell = cells[targetIndex];
+  const targetCell = document.querySelector(`.grid-cell[data-col="${newCol}"][data-row="${newRow}"]`);
   
   if (targetCell) {
     targetCell.focus();
@@ -536,6 +677,59 @@ function populateBoardSelector() {
     `<option value="${escapeHTML(opt.id)}">${escapeHTML(opt.label)}</option>`
   ).join('');
   select.value = appState.board || DEFAULT_BOARD_ID;
+  populateGridSelector();
+}
+
+function getCurrentBoardConfig(state = appState) {
+  return getBoardConfig(state.board || DEFAULT_BOARD_ID) || getBoardConfig(DEFAULT_BOARD_ID);
+}
+
+function gridOptionValue(option) {
+  return `${option.columns}x${option.rows}`;
+}
+
+function getNormalizedGridForBoard(boardConfig, columns, rows) {
+  if (isGridAllowedForBoard(boardConfig, columns, rows)) {
+    return { columns, rows };
+  }
+  return getDefaultGridForBoard(boardConfig);
+}
+
+function updateGridSizePreview(columns, rows) {
+  const preview = document.getElementById('grid-size-preview');
+  if (!preview || typeof preview.style?.setProperty !== 'function') return;
+
+  preview.style.setProperty('--preview-columns', columns);
+  preview.style.setProperty('--preview-rows', rows);
+  preview.setAttribute('title', `${columns}×${rows} grid`);
+  preview.innerHTML = Array.from({ length: columns * rows }, () => '<span class="grid-size-preview-cell"></span>').join('');
+}
+
+function populateGridSelector() {
+  const select = document.getElementById('grid-size-select');
+  const hint = document.getElementById('grid-size-hint');
+  if (!select) return;
+
+  const boardConfig = getCurrentBoardConfig();
+  const options = getAllowedGridOptions(boardConfig);
+  const isLocked = options.length === 1;
+  const current = getNormalizedGridForBoard(boardConfig, appState.gridColumns || DEFAULT_CONFIG.gridColumns, appState.gridRows || DEFAULT_CONFIG.gridRows);
+
+  select.innerHTML = options.map(option => {
+    const label = `${option.columns}×${option.rows}${isLocked ? ' (locked)' : ''}`;
+    return `<option value="${gridOptionValue(option)}">${label}</option>`;
+  }).join('');
+  select.value = gridOptionValue(current);
+  select.disabled = isLocked;
+  updateGridSizePreview(current.columns, current.rows);
+
+  if (hint) {
+    const warnings = getBoardSupportWarnings(boardConfig);
+    const warningText = warnings.length ? ` ${warnings.map(w => w.message).join(' ')}` : '';
+    hint.textContent = isLocked
+      ? `320×240 boards use a fixed 4×3 grid.${warningText}`
+      : `Choose the grid density for larger displays.${warningText}`;
+  }
 }
 
 function updateLEDCompatibility() {
@@ -551,15 +745,33 @@ function updateLEDCompatibility() {
   });
 }
 
+function updateBoardSupportWarning(boardId) {
+  const warningEl = document.getElementById('board-support-warning');
+  if (!warningEl) return;
+
+  const warnings = getBoardSupportWarnings(getBoardConfig(boardId || DEFAULT_BOARD_ID));
+  const message = warnings.find(warning => warning?.message)?.message || '';
+
+  warningEl.textContent = message;
+  warningEl.classList.toggle('hidden', !message);
+  warningEl.setAttribute('aria-hidden', message ? 'false' : 'true');
+}
+
 function updateGlobalSettings() {
   document.getElementById('device-name').value = appState.deviceName || '';
   document.getElementById('nice-name').value = appState.niceName || '';
   document.getElementById('display-timeout').value = appState.displayTimeout || 600;
   const boardSelect = document.getElementById('board-select');
   if (boardSelect) boardSelect.value = appState.board || DEFAULT_BOARD_ID;
+  const flipHorizontal = document.getElementById('flip-horizontal');
+  if (flipHorizontal) flipHorizontal.checked = Boolean(appState.flipHorizontal);
+  const iconSizeInput = document.getElementById('icon-size');
+  if (iconSizeInput) iconSizeInput.value = appState.iconSize || DEFAULT_CONFIG.iconSize;
+  populateGridSelector();
   document.getElementById('device-name-hint').textContent = appState.deviceName ? `hostname: ${appState.deviceName}` : '';
   renderLedControl();
   updateLEDCompatibility();
+  updateBoardSupportWarning(appState.board || DEFAULT_BOARD_ID);
 }
 
 function generateYAML() {
@@ -585,6 +797,7 @@ function generateYAML() {
       BOARD_OPTIONS,
       DEFAULT_BOARD_ID,
       getBoardConfig,
+      isSupportedBoard,
       normalizeColor,
       clampNumber,
       normalizeImportedConfig,
@@ -706,7 +919,11 @@ function setupThemeToggle() {
   if (themeToggle) {
     themeToggle.addEventListener('click', () => {
       const isDark = !document.documentElement.hasAttribute('data-theme');
-      document.documentElement.setAttribute('data-theme', isDark ? 'light' : '');
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
       themeToggle.textContent = isDark ? '☀️' : '🌙';
       localStorage.setItem('cyd-theme', isDark ? 'light' : 'dark');
     });
@@ -758,7 +975,46 @@ function setupGlobalSettings() {
   });
 
   document.getElementById('board-select')?.addEventListener('change', (e) => {
-    store.update('Change board', state => { state.board = e.target.value || DEFAULT_BOARD_ID; });
+    const nextBoard = e.target.value || DEFAULT_BOARD_ID;
+    store.update('Change board', state => {
+      state.board = nextBoard;
+      const boardConfig = getBoardConfig(nextBoard) || getBoardConfig(DEFAULT_BOARD_ID);
+      const grid = getNormalizedGridForBoard(boardConfig, state.gridColumns || DEFAULT_CONFIG.gridColumns, state.gridRows || DEFAULT_CONFIG.gridRows);
+      state.gridColumns = grid.columns;
+      state.gridRows = grid.rows;
+      // Clamp button positions to new grid bounds
+      state.buttons.forEach(btn => {
+        btn.col = Math.max(0, Math.min(state.gridColumns - 1, btn.col));
+        btn.row = Math.max(0, Math.min(state.gridRows - 1, btn.row));
+      });
+    });
+  });
+
+  document.getElementById('grid-size-select')?.addEventListener('change', (e) => {
+    const [columns, rows] = e.target.value.split('x').map(Number);
+    const boardConfig = getCurrentBoardConfig();
+    if (!isGridAllowedForBoard(boardConfig, columns, rows)) {
+      populateGridSelector();
+      return;
+    }
+    store.update('Change grid size', state => {
+      state.gridColumns = columns;
+      state.gridRows = rows;
+      // Clamp button positions to new grid bounds
+      state.buttons.forEach(btn => {
+        btn.col = Math.max(0, Math.min(columns - 1, btn.col));
+        btn.row = Math.max(0, Math.min(rows - 1, btn.row));
+      });
+    });
+  });
+
+  document.getElementById('flip-horizontal')?.addEventListener('change', (e) => {
+    store.update('Toggle horizontal flip', state => { state.flipHorizontal = e.target.checked; });
+  });
+
+  document.getElementById('icon-size')?.addEventListener('input', (e) => {
+    const iconSize = Math.max(16, Math.min(96, parseInt(e.target.value, 10) || 48));
+    store.update('Change icon size', state => { state.iconSize = iconSize; });
   });
 }
 
@@ -774,6 +1030,7 @@ function setupPresets() {
         });
         renderLedControl();
         updateLEDCompatibility();
+        updateBoardSupportWarning(appState.board || DEFAULT_BOARD_ID);
       }
     });
   });
@@ -1349,6 +1606,9 @@ window.generateFullYAML = (config) => YamlGenerationEngine.generateFullYAML(conf
   hardwareConfig: HARDWARE_CONFIG,
   defaultButton: DEFAULT_BUTTON,
   defaultConfig: DEFAULT_CONFIG,
+  DEFAULT_BOARD_ID,
+  getBoardConfig,
+  isSupportedBoard,
   normalizeColor,
   clampNumber,
   normalizeImportedConfig,

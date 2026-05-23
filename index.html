@@ -56,6 +56,24 @@
             <label for="board-select">Board</label>
             <select id="board-select" class="form-control"></select>
           </div>
+          <div id="board-support-warning" class="board-support-warning hidden" role="alert"></div>
+          <div class="form-group">
+            <label for="grid-size-select">Grid Size</label>
+            <div class="grid-size-control">
+              <select id="grid-size-select" class="form-control"></select>
+              <div id="grid-size-preview" class="grid-size-preview" aria-hidden="true"></div>
+            </div>
+            <span class="hint" id="grid-size-hint">Choose a supported grid for this board.</span>
+          </div>
+          <div class="form-group checkbox-group flip-setting">
+            <label><input type="checkbox" id="flip-horizontal"> Flip horizontal</label>
+            <span class="hint">Mirror the display and touch mapping for landscape mounting.</span>
+          </div>
+          <div class="form-group">
+            <label for="icon-size">Icon Size</label>
+            <input type="number" class="form-control" id="icon-size" min="16" max="96" step="1" value="48">
+            <span class="hint">Set the icon font size for generated YAML (16-96).</span>
+          </div>
           <div class="form-group">
             <label for="display-timeout">Display Timeout (seconds)</label>
             <input type="number" class="form-control" id="display-timeout" min="90" max="3600" value="600">
