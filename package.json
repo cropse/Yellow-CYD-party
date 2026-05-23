@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "oh-my-opencode-linux-x64": "^4.0.0",
+    "playwright": "^1.60.0",
     "yaml": "^2.9.0"
   }
 }

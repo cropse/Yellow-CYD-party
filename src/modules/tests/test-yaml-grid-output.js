@@ -199,13 +199,13 @@ describe('generateLVGLWidgets out-of-bounds skipping', () => {
   });
 });
 
-// ── generateHardwareConfig flip transform ────────────────────────────────
-describe('generateHardwareConfig flip transform', () => {
+// ── generateHardwareConfig rotate180 transform ───────────────────────────
+describe('generateHardwareConfig rotate180 transform', () => {
   const hwDeps = () => testDeps({ normalizeImportedConfig });
 
-  it('CYD 320×240 flip=false keeps swap_xy, no mirror_x on display or touch', () => {
+  it('CYD 320×240 rotate180=false keeps swap_xy, no mirror on display or touch', () => {
     const board = BOARD_CONFIGS['esp32-2432s028-2port'];
-    const out = generateHardwareConfig(board, { flipHorizontal: false }, hwDeps());
+    const out = generateHardwareConfig(board, { rotate180: false }, hwDeps());
     const displayTransform = extractTransformKeys(out, 'display:');
     const touchTransform = extractTransformKeys(out, 'touchscreen:');
     assert.ok(displayTransform, 'display section should exist');
@@ -216,20 +216,22 @@ describe('generateHardwareConfig flip transform', () => {
     assert.strictEqual(touchTransform.mirror_x, undefined, 'touch should not have mirror_x key');
   });
 
-  it('CYD 320×240 flip=true adds mirror_x to both display and touch', () => {
+  it('CYD 320×240 rotate180=true adds mirror_x and mirror_y to both display and touch', () => {
     const board = BOARD_CONFIGS['esp32-2432s028-2port'];
-    const out = generateHardwareConfig(board, { flipHorizontal: true }, hwDeps());
+    const out = generateHardwareConfig(board, { rotate180: true }, hwDeps());
     const displayTransform = extractTransformKeys(out, 'display:');
     const touchTransform = extractTransformKeys(out, 'touchscreen:');
     assert.strictEqual(displayTransform.swap_xy, true);
-    assert.strictEqual(displayTransform.mirror_x, true, 'display should have mirror_x true when flipped');
+    assert.strictEqual(displayTransform.mirror_x, true, 'display should have mirror_x true when rotated 180');
+    assert.strictEqual(displayTransform.mirror_y, true, 'display should have mirror_y true when rotated 180');
     assert.strictEqual(touchTransform.swap_xy, true);
-    assert.strictEqual(touchTransform.mirror_x, true, 'touch should have mirror_x true when flipped');
+    assert.strictEqual(touchTransform.mirror_x, true, 'touch should have mirror_x true when rotated 180');
+    assert.strictEqual(touchTransform.mirror_y, true, 'touch should have mirror_y true when rotated 180');
   });
 
-  it('CYD 480×320 flip=false preserves existing board mirror_x on touch', () => {
+  it('CYD 480×320 rotate180=false preserves existing board mirror_x on touch', () => {
     const board = BOARD_CONFIGS['esp32-3248s035c'];
-    const out = generateHardwareConfig(board, { flipHorizontal: false }, hwDeps());
+    const out = generateHardwareConfig(board, { rotate180: false }, hwDeps());
     const displayTransform = extractTransformKeys(out, 'display:');
     const touchTransform = extractTransformKeys(out, 'touchscreen:');
     assert.strictEqual(displayTransform.swap_xy, true);
@@ -238,20 +240,22 @@ describe('generateHardwareConfig flip transform', () => {
     assert.strictEqual(touchTransform.mirror_x, true, '480×320 board already has mirror_x true, should stay true when not flipped');
   });
 
-  it('CYD 480×320 flip=true XORs with existing board mirror_x', () => {
+  it('CYD 480×320 rotate180=true XORs with existing board mirror_x and mirror_y', () => {
     const board = BOARD_CONFIGS['esp32-3248s035c'];
-    const out = generateHardwareConfig(board, { flipHorizontal: true }, hwDeps());
+    const out = generateHardwareConfig(board, { rotate180: true }, hwDeps());
     const displayTransform = extractTransformKeys(out, 'display:');
     const touchTransform = extractTransformKeys(out, 'touchscreen:');
     assert.strictEqual(displayTransform.swap_xy, true);
-    assert.strictEqual(displayTransform.mirror_x, true, 'display should flip to mirror_x true');
+    assert.strictEqual(displayTransform.mirror_x, true, 'display should rotate to mirror_x true');
+    assert.strictEqual(displayTransform.mirror_y, true, 'display should rotate to mirror_y true');
     assert.strictEqual(touchTransform.swap_xy, true);
-    assert.strictEqual(touchTransform.mirror_x, false, 'touch board mirror_x true XOR flip true = false');
+    assert.strictEqual(touchTransform.mirror_x, false, 'touch board mirror_x true XOR rotate180 true = false');
+    assert.strictEqual(touchTransform.mirror_y, true, 'touch board mirror_y false XOR rotate180 true = true');
   });
 
-  it('Guition flip=false preserves mirror_x and mirror_y on touch', () => {
+  it('Guition rotate180=false preserves mirror_x and mirror_y on touch', () => {
     const board = BOARD_CONFIGS['guition-jc4827543c'];
-    const out = generateHardwareConfig(board, { flipHorizontal: false }, hwDeps());
+    const out = generateHardwareConfig(board, { rotate180: false }, hwDeps());
     const displayTransform = extractTransformKeys(out, 'display:');
     const touchTransform = extractTransformKeys(out, 'touchscreen:');
     assert.deepStrictEqual(displayTransform, {}, 'Guition display should have no transform block');
@@ -259,18 +263,19 @@ describe('generateHardwareConfig flip transform', () => {
     assert.strictEqual(touchTransform.mirror_y, true, 'Guition touch should keep mirror_y true');
   });
 
-  it('Guition flip=true XORs mirror_x on display and touch', () => {
+  it('Guition rotate180=true XORs both mirror_x and mirror_y on display and touch', () => {
     const board = BOARD_CONFIGS['guition-jc4827543c'];
-    const out = generateHardwareConfig(board, { flipHorizontal: true }, hwDeps());
+    const out = generateHardwareConfig(board, { rotate180: true }, hwDeps());
     const displayTransform = extractTransformKeys(out, 'display:');
     const touchTransform = extractTransformKeys(out, 'touchscreen:');
-    assert.strictEqual(displayTransform.mirror_x, true, 'Guition display should get mirror_x true from flip');
-    assert.strictEqual(touchTransform.mirror_x, false, 'Guition touch mirror_x true XOR flip true = false');
-    assert.strictEqual(touchTransform.mirror_y, true, 'Guition touch should keep mirror_y true');
+    assert.strictEqual(displayTransform.mirror_x, true, 'Guition display should get mirror_x true from rotate180');
+    assert.strictEqual(displayTransform.mirror_y, true, 'Guition display should get mirror_y true from rotate180');
+    assert.strictEqual(touchTransform.mirror_x, false, 'Guition touch mirror_x true XOR rotate180 true = false');
+    assert.strictEqual(touchTransform.mirror_y, false, 'Guition touch mirror_y true XOR rotate180 true = false');
   });
 });
 
-// ── generateFullYAML end-to-end grid + flip ──────────────────────────────
+// ── generateFullYAML end-to-end grid + rotate180 ─────────────────────────
 describe('generateFullYAML grid and flip integration', () => {
   const fullDeps = (addl = {}) => testDeps({
     normalizeImportedConfig,
@@ -290,7 +295,7 @@ describe('generateFullYAML grid and flip integration', () => {
       displayTimeout: 600,
       gridColumns: 5,
       gridRows: 4,
-      flipHorizontal: false,
+      rotate180: false,
       buttons: Array(20).fill(null).map((_, i) => ({
         id: `btn_${i + 1}`, name: `Button ${i + 1}`, label: `Btn ${i + 1}`,
         col: i % 5, row: Math.floor(i / 5),
@@ -308,7 +313,7 @@ describe('generateFullYAML grid and flip integration', () => {
     assert.strictEqual(rowEntries.length, 4);
   });
 
-  it('full YAML flip=true on default board affects hardware transforms', () => {
+  it('full YAML rotate180=true on default board affects hardware transforms', () => {
     const config = {
       deviceName: 'test-cyd',
       niceName: 'Test CYD',
@@ -316,7 +321,7 @@ describe('generateFullYAML grid and flip integration', () => {
       displayTimeout: 600,
       gridColumns: 4,
       gridRows: 3,
-      flipHorizontal: true,
+      rotate180: true,
       buttons: Array(12).fill(null).map((_, i) => ({
         id: `btn_${i + 1}`, name: `Button ${i + 1}`, label: `Btn ${i + 1}`,
         col: i % 4, row: Math.floor(i / 4),
@@ -328,7 +333,9 @@ describe('generateFullYAML grid and flip integration', () => {
     const displayTransform = extractTransformKeys(yaml, 'display:');
     const touchTransform = extractTransformKeys(yaml, 'touchscreen:');
     assert.strictEqual(displayTransform.mirror_x, true);
+    assert.strictEqual(displayTransform.mirror_y, true);
     assert.strictEqual(touchTransform.mirror_x, true);
+    assert.strictEqual(touchTransform.mirror_y, true);
   });
 
   it('full YAML with out-of-bounds buttons does not emit them', () => {
@@ -339,7 +346,7 @@ describe('generateFullYAML grid and flip integration', () => {
       displayTimeout: 600,
       gridColumns: 4,
       gridRows: 3,
-      flipHorizontal: false,
+      rotate180: false,
       buttons: [
         ...Array(12).fill(null).map((_, i) => ({
           id: `btn_${i + 1}`, name: `Button ${i + 1}`, label: `Btn ${i + 1}`,

@@ -225,9 +225,9 @@ function generateCydHardwareConfig(boardConfig, config, deps) {
     model: ${display.model}` : '';
   const colorOrder = display.color_order ? `
     color_order: ${display.color_order}` : '';
-  const flip = Boolean(config?.flipHorizontal);
-  const displayTransformObj = flip ? composeTransform(display.transform, true) : (display.transform || {});
-  const touchTransformObj = flip ? composeTransform(touch.transform, true) : (touch.transform || {});
+  const rotate = Boolean(config?.rotate180);
+  const displayTransformObj = rotate ? composeTransform(display.transform, true) : (display.transform || {});
+  const touchTransformObj = rotate ? composeTransform(touch.transform, true) : (touch.transform || {});
   const displayTransform = Object.entries(displayTransformObj).map(([key, value]) => `      ${key}: ${value}`).join('\n');
   const touchTransform = Object.entries(touchTransformObj).map(([key, value]) => `      ${key}: ${value}`).join('\n');
   const spiSection = touch.spi_id === 'tft' ? `spi:
@@ -321,9 +321,9 @@ function generateGuitionHardwareConfig(boardConfig, config, deps) {
   }).join('\n')}` : '';
   const i2cId = touch.i2c.id ? `\n    i2c_id: ${touch.i2c.id}` : '';
   const backlightFreq = hardware.backlight.frequency ? `\n    frequency: ${hardware.backlight.frequency}` : '';
-  const flip = Boolean(config?.flipHorizontal);
-  const composedDisplayTransform = flip ? composeTransform(hardware.display.transform, true) : (hardware.display.transform || {});
-  const composedTouchTransform = flip ? composeTransform(hardware.touch.transform, true) : (hardware.touch.transform || {});
+  const rotate = Boolean(config?.rotate180);
+  const composedDisplayTransform = rotate ? composeTransform(hardware.display.transform, true) : (hardware.display.transform || {});
+  const composedTouchTransform = rotate ? composeTransform(hardware.touch.transform, true) : (hardware.touch.transform || {});
   const displayTransform = Object.keys(composedDisplayTransform).length > 0
     ? `\n    transform:\n${Object.entries(composedDisplayTransform).map(([k, v]) => `      ${k}: ${v}`).join('\n')}`
     : '';
@@ -386,7 +386,7 @@ ${Object.entries(composedTouchTransform).map(([k, v]) => `      ${k}: ${v}`).joi
 
 export function generateHardwareConfig(boardConfig, config, deps) {
   if (!boardConfig?.hardware) return deps.hardwareConfig || '';
-  if (boardConfig.id === 'esp32-2432s028-2port' && deps.hardwareConfig && !config?.flipHorizontal) return deps.hardwareConfig;
+  if (boardConfig.id === 'esp32-2432s028-2port' && deps.hardwareConfig && !config?.rotate180) return deps.hardwareConfig;
   if (boardConfig.hardware.display?.qspi || boardConfig.hardware.touch?.driver === 'gt911') return generateGuitionHardwareConfig(boardConfig, config, deps);
   return generateCydHardwareConfig(boardConfig, config, deps);
 }
@@ -807,15 +807,18 @@ export function highlightYAML(text) {
 }
 
 /**
- * Compose a flipHorizontal toggle with the board's built-in transform.
- * Produces the effective transform for a responsive flip option.
+ * Compose a rotate180 toggle with the board's built-in transform.
+ * Produces the effective transform for a 180-degree rotation.
  *
- * Composition rule: XOR flipHorizontal with board mirror_x.
- * All other transform keys (swap_xy, mirror_y, rotation, etc.) pass through unchanged.
- * mirror_x is always emitted in the output (even false) for consistency.
+ * Rotating 180 degrees = mirror X + mirror Y (both axes flipped).
+ * Composition rule: XOR rotate180 with board mirror_x and mirror_y.
+ * All other transform keys (swap_xy, rotation, etc.) pass through unchanged.
+ * Both mirror_x and mirror_y are always emitted in the output for consistency.
  */
-export function composeTransform(boardTransform, flipHorizontal) {
+export function composeTransform(boardTransform, rotate180) {
   const boardMirrorX = Boolean(boardTransform?.mirror_x);
-  const effectiveMirrorX = boardMirrorX !== Boolean(flipHorizontal);
-  return { ...(boardTransform || {}), mirror_x: effectiveMirrorX };
+  const boardMirrorY = Boolean(boardTransform?.mirror_y);
+  const effectiveMirrorX = boardMirrorX !== Boolean(rotate180);
+  const effectiveMirrorY = boardMirrorY !== Boolean(rotate180);
+  return { ...(boardTransform || {}), mirror_x: effectiveMirrorX, mirror_y: effectiveMirrorY };
 }

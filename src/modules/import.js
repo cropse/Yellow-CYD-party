@@ -43,7 +43,8 @@ export function normalizeImportedConfig(rawConfig) {
   const board = resolveBoard(source.board);
   const boardConfig = getBoardConfig(board);
   const grid = normalizeGridConfig(source, boardConfig);
-  const flipHorizontal = Boolean(source.flipHorizontal);
+  // Backward compatibility: map old flipHorizontal to rotate180
+const rotate180 = source.rotate180 !== undefined ? Boolean(source.rotate180) : Boolean(source.flipHorizontal);
 
   if (
     (source.gridColumns !== undefined && source.gridColumns !== grid.gridColumns) ||
@@ -59,7 +60,7 @@ export function normalizeImportedConfig(rawConfig) {
     board,
     gridColumns: grid.gridColumns,
     gridRows: grid.gridRows,
-    flipHorizontal,
+    rotate180,
     iconSize: clampNumber(source.iconSize, 16, 96, DEFAULT_CONFIG.iconSize),
     led: normalizeLedConfig(source.led),
     buttons: Array(12).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings, grid.gridColumns - 1, grid.gridRows - 1))

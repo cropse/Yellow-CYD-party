@@ -42,7 +42,7 @@ describe('normalizeImportedConfig - grid/flip fields', () => {
     });
     assert.strictEqual(config.gridColumns, 4);
     assert.strictEqual(config.gridRows, 3);
-    assert.strictEqual(config.flipHorizontal, false);
+    assert.strictEqual(config.rotate180, false);
   });
 
   it('preserves valid 4x3 grid for small board', () => {
@@ -106,29 +106,44 @@ describe('normalizeImportedConfig - grid/flip fields', () => {
     assert.strictEqual(config.gridRows, 4);
   });
 
-  it('flipHorizontal string "true" normalizes to true', () => {
-    const { config } = normalizeImportedConfig({ flipHorizontal: 'true' });
-    assert.strictEqual(config.flipHorizontal, true);
+  it('rotate180 string "true" normalizes to true', () => {
+    const { config } = normalizeImportedConfig({ rotate180: 'true' });
+    assert.strictEqual(config.rotate180, true);
   });
 
-  it('flipHorizontal number 1 normalizes to true', () => {
-    const { config } = normalizeImportedConfig({ flipHorizontal: 1 });
-    assert.strictEqual(config.flipHorizontal, true);
+  it('rotate180 number 1 normalizes to true', () => {
+    const { config } = normalizeImportedConfig({ rotate180: 1 });
+    assert.strictEqual(config.rotate180, true);
   });
 
-  it('flipHorizontal number 0 normalizes to false', () => {
-    const { config } = normalizeImportedConfig({ flipHorizontal: 0 });
-    assert.strictEqual(config.flipHorizontal, false);
+  it('rotate180 number 0 normalizes to false', () => {
+    const { config } = normalizeImportedConfig({ rotate180: 0 });
+    assert.strictEqual(config.rotate180, false);
   });
 
-  it('flipHorizontal null normalizes to false', () => {
-    const { config } = normalizeImportedConfig({ flipHorizontal: null });
-    assert.strictEqual(config.flipHorizontal, false);
+  it('rotate180 null normalizes to false', () => {
+    const { config } = normalizeImportedConfig({ rotate180: null });
+    assert.strictEqual(config.rotate180, false);
   });
 
-  it('flipHorizontal undefined normalizes to false', () => {
+  it('rotate180 undefined normalizes to false', () => {
     const { config } = normalizeImportedConfig({});
-    assert.strictEqual(config.flipHorizontal, false);
+    assert.strictEqual(config.rotate180, false);
+  });
+
+  it('old flipHorizontal:true maps to rotate180:true (backward compat)', () => {
+    const { config } = normalizeImportedConfig({ flipHorizontal: true });
+    assert.strictEqual(config.rotate180, true);
+  });
+
+  it('old flipHorizontal:false maps to rotate180:false (backward compat)', () => {
+    const { config } = normalizeImportedConfig({ flipHorizontal: false });
+    assert.strictEqual(config.rotate180, false);
+  });
+
+  it('rotate180 takes precedence over old flipHorizontal', () => {
+    const { config } = normalizeImportedConfig({ flipHorizontal: true, rotate180: false });
+    assert.strictEqual(config.rotate180, false);
   });
 });
 
@@ -261,42 +276,42 @@ describe('validateConfig - button positions against grid', () => {
   });
 });
 
-// ── Validation: flipHorizontal ───────────────────────────────────────────
+// ── Validation: rotate180 ───────────────────────────────────────────────
 
-describe('validateConfig - flipHorizontal validation', () => {
-  it('flipHorizontal true passes', () => {
-    const cfg = makeValidConfig({ flipHorizontal: true });
+describe('validateConfig - rotate180 validation', () => {
+  it('rotate180 true passes', () => {
+    const cfg = makeValidConfig({ rotate180: true });
     const result = validateConfig(cfg, { ACTION_SCHEMAS });
-    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('flip'));
+    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('rotate180'));
     assert.strictEqual(flipErrors.length, 0);
   });
 
-  it('flipHorizontal false passes', () => {
-    const cfg = makeValidConfig({ flipHorizontal: false });
+  it('rotate180 false passes', () => {
+    const cfg = makeValidConfig({ rotate180: false });
     const result = validateConfig(cfg, { ACTION_SCHEMAS });
-    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('flip'));
+    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('rotate180'));
     assert.strictEqual(flipErrors.length, 0);
   });
 
-  it('flipHorizontal string "true" fails (must be boolean)', () => {
-    const cfg = makeValidConfig({ flipHorizontal: 'true' });
+  it('rotate180 string "true" fails (must be boolean)', () => {
+    const cfg = makeValidConfig({ rotate180: 'true' });
     const result = validateConfig(cfg, { ACTION_SCHEMAS });
-    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('flip'));
+    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('rotate180'));
     assert.strictEqual(flipErrors.length, 1);
   });
 
-  it('flipHorizontal number 1 fails (must be boolean)', () => {
-    const cfg = makeValidConfig({ flipHorizontal: 1 });
+  it('rotate180 number 1 fails (must be boolean)', () => {
+    const cfg = makeValidConfig({ rotate180: 1 });
     const result = validateConfig(cfg, { ACTION_SCHEMAS });
-    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('flip'));
+    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('rotate180'));
     assert.strictEqual(flipErrors.length, 1);
   });
 
-  it('missing flipHorizontal passes (backward compatibility)', () => {
+  it('missing rotate180 passes (backward compatibility)', () => {
     const cfg = makeValidConfig();
-    delete cfg.flipHorizontal;
+    delete cfg.rotate180;
     const result = validateConfig(cfg, { ACTION_SCHEMAS });
-    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('flip'));
+    const flipErrors = result.errors.filter(e => e.message.toLowerCase().includes('rotate180'));
     assert.strictEqual(flipErrors.length, 0);
   });
 

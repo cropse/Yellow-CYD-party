@@ -373,7 +373,7 @@ export const DEFAULT_CONFIG = {
   gridColumns: 4,
   gridRows: 3,
   iconSize: 48,
-  flipHorizontal: false,
+  rotate180: false,
   led: structuredClone(DEFAULT_LED),
   buttons: Array(12).fill(null).map((_, i) => ({
     ...structuredClone(DEFAULT_BUTTON),

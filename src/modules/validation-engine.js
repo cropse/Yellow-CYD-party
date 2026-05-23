@@ -63,8 +63,8 @@ export function validateConfig(config, deps = {}) {
     }
   }
 
-  if (config.flipHorizontal !== undefined && typeof config.flipHorizontal !== 'boolean') {
-    issues.errors.push({ message: 'flipHorizontal must be a boolean value (true or false).', selector: '#flip-horizontal' });
+  if (config.rotate180 !== undefined && typeof config.rotate180 !== 'boolean') {
+    issues.errors.push({ message: 'rotate180 must be a boolean value (true or false).', selector: '#rotate-180' });
   }
 
   if (config.iconSize !== undefined) {
