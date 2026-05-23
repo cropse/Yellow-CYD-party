@@ -6,6 +6,7 @@ export const BOARD_CONFIGS = {
   'esp32-2432s028-2port': {
     id: 'esp32-2432s028-2port',
     label: 'ESP32-2432S028-2port (320×240)',
+    supportStatus: 'upstream-example',
     width: 320,
     height: 240,
     hardwareType: HardwareType.CYD_SPI_XPT2046,
@@ -38,6 +39,7 @@ export const BOARD_CONFIGS = {
   'esp32-e32r28t': {
     id: 'esp32-e32r28t',
     label: 'ESP32-E32R28T (320×240)',
+    supportStatus: 'upstream-example',
     width: 320,
     height: 240,
     hardwareType: HardwareType.CYD_SPI_XPT2046,
@@ -68,6 +70,7 @@ export const BOARD_CONFIGS = {
   'esp32-3248s035c': {
     id: 'esp32-3248s035c',
     label: 'ESP32-3248S035C (480×320)',
+    supportStatus: 'upstream-example',
     width: 480,
     height: 320,
     hardwareType: HardwareType.CYD_SPI_XPT2046,
@@ -100,6 +103,7 @@ export const BOARD_CONFIGS = {
   'esp32-e32r35t': {
     id: 'esp32-e32r35t',
     label: 'ESP32-E32R35T (480×320)',
+    supportStatus: 'upstream-example',
     width: 480,
     height: 320,
     hardwareType: HardwareType.CYD_SPI_XPT2046,
@@ -132,6 +136,7 @@ export const BOARD_CONFIGS = {
   'esp32-e32r40t': {
     id: 'esp32-e32r40t',
     label: 'ESP32-E32R40T (480×320)',
+    supportStatus: 'upstream-example',
     width: 480,
     height: 320,
     hardwareType: HardwareType.CYD_SPI_XPT2046,
@@ -164,6 +169,7 @@ export const BOARD_CONFIGS = {
   'guition-jc4827543c': {
     id: 'guition-jc4827543c',
     label: 'Guition JC4827543C (480×272)',
+    supportStatus: 'upstream-example',
     width: 480,
     height: 272,
     hardwareType: HardwareType.GUITION_QSPI_GT911,
@@ -226,6 +232,98 @@ export function getDefaultBoardConfig() {
   return { ...BOARD_CONFIGS[DEFAULT_BOARD_ID] };
 }
 
+export function getBoardSupportWarnings(boardConfig) {
+  if (!boardConfig || !boardConfig.supportStatus) return [];
+
+  if (boardConfig.supportStatus === 'no-upstream-example') {
+    return [{
+      code: 'no-upstream-example',
+      message: 'No upstream makeitworktech example found for this board; generated YAML is based on local board metadata.',
+      severity: 'warning',
+      blocking: false
+    }];
+  }
+
+  return [];
+}
+
+// ── Grid policy helpers ──────────────────────────────────────────────────
+
+// Allowed grid options for small (320x240) boards: only 4x3
+const SMALL_GRID_OPTIONS = [{ columns: 4, rows: 3 }];
+
+// Allowed grid options for larger boards (>320 wide or >240 tall): 4x3, 4x4, 5x3, 5x4
+const LARGE_GRID_OPTIONS = [
+  { columns: 4, rows: 3 },
+  { columns: 4, rows: 4 },
+  { columns: 5, rows: 3 },
+  { columns: 5, rows: 4 }
+];
+
+function isSmallBoard(boardConfig) {
+  if (!boardConfig || !boardConfig.width || !boardConfig.height) return true;
+  return boardConfig.width <= 320 && boardConfig.height <= 240;
+}
+
+/**
+ * Returns the list of allowed { columns, rows } options for a given board config.
+ * @param {object|null} boardConfig - A BOARD_CONFIGS entry or null
+ * @returns {Array<{columns: number, rows: number}>}
+ */
+export function getAllowedGridOptions(boardConfig) {
+  if (!boardConfig) return SMALL_GRID_OPTIONS;
+  return isSmallBoard(boardConfig) ? SMALL_GRID_OPTIONS : LARGE_GRID_OPTIONS;
+}
+
+/**
+ * Returns the default grid { columns, rows } for a given board config (always 4x3).
+ * @param {object|null} boardConfig - A BOARD_CONFIGS entry or null
+ * @returns {{columns: number, rows: number}}
+ */
+export function getDefaultGridForBoard(boardConfig) {
+  return { columns: 4, rows: 3 };
+}
+
+/**
+ * Checks whether a given (columns, rows) grid size is allowed for a board config.
+ * @param {object|null} boardConfig - A BOARD_CONFIGS entry or null
+ * @param {number} columns
+ * @param {number} rows
+ * @returns {boolean}
+ */
+export function isGridAllowedForBoard(boardConfig, columns, rows) {
+  const options = getAllowedGridOptions(boardConfig);
+  return options.some(o => o.columns === columns && o.rows === rows);
+}
+
+/**
+ * Normalizes a grid config object, ensuring gridColumns and gridRows are valid.
+ * Invalid or missing values default to the board's default (4x3).
+ * Does NOT modify original object — returns a new one.
+ * @param {object|null|undefined} config - Object with optional gridColumns, gridRows
+ * @param {object|null} boardConfig - A BOARD_CONFIGS entry or null
+ * @returns {{gridColumns: number, gridRows: number}}
+ */
+export function normalizeGridConfig(config, boardConfig) {
+  const defaults = { gridColumns: 4, gridRows: 3 };
+  if (!config) return { ...defaults };
+
+  const cols = config.gridColumns;
+  const rows = config.gridRows;
+
+  // If either is missing or non-positive, use defaults
+  if (cols == null || rows == null || cols < 1 || rows < 1) {
+    return { gridColumns: cols > 0 ? cols : 4, gridRows: rows > 0 ? rows : 3 };
+  }
+
+  // If the combination is not allowed, fall back to defaults
+  if (!isGridAllowedForBoard(boardConfig, cols, rows)) {
+    return { ...defaults };
+  }
+
+  return { gridColumns: cols, gridRows: rows };
+}
+
 export const DEFAULT_LED = {
   enabled: false,
   effect: 'on-entity',
@@ -272,6 +370,10 @@ export const DEFAULT_CONFIG = {
   board: DEFAULT_BOARD_ID,
   displayTimeout: 600,
   apPassword: null, // Generated randomly on first YAML generation
+  gridColumns: 4,
+  gridRows: 3,
+  iconSize: 48,
+  flipHorizontal: false,
   led: structuredClone(DEFAULT_LED),
   buttons: Array(12).fill(null).map((_, i) => ({
     ...structuredClone(DEFAULT_BUTTON),

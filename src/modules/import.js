@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED, ACTION_SCHEMAS, DEFAULT_BOARD_ID, isSupportedBoard } from './config.js';
+import { DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED, ACTION_SCHEMAS, DEFAULT_BOARD_ID, isSupportedBoard, getBoardConfig, normalizeGridConfig } from './config.js';
 import { normalizeColor, clampNumber, ensureUniquePositions, isPlainYAMLObject, sanitizeDeviceName, cleanYAMLValue, getYAMLSection, splitTopLevelListItems, parseYAMLKeyValue } from './utils.js';
 
 function normalizeLedColor(raw) {
@@ -40,13 +40,29 @@ export function normalizeImportedConfig(rawConfig) {
   const buttons = Array.isArray(source.buttons) ? source.buttons : [];
   if (buttons.length !== 12) warnings.push(`Imported config had ${buttons.length || 0} buttons; normalized to 12 CYD buttons.`);
 
+  const board = resolveBoard(source.board);
+  const boardConfig = getBoardConfig(board);
+  const grid = normalizeGridConfig(source, boardConfig);
+  const flipHorizontal = Boolean(source.flipHorizontal);
+
+  if (
+    (source.gridColumns !== undefined && source.gridColumns !== grid.gridColumns) ||
+    (source.gridRows !== undefined && source.gridRows !== grid.gridRows)
+  ) {
+    warnings.push(`Grid size was normalized to ${grid.gridColumns}x${grid.gridRows} for the selected board.`);
+  }
+
   const config = {
     deviceName: sanitizeDeviceName(source.deviceName || DEFAULT_CONFIG.deviceName) || DEFAULT_CONFIG.deviceName,
     niceName: String(source.niceName || DEFAULT_CONFIG.niceName).trim() || DEFAULT_CONFIG.niceName,
     displayTimeout: clampNumber(source.displayTimeout, 90, 3600, DEFAULT_CONFIG.displayTimeout),
-    board: resolveBoard(source.board),
+    board,
+    gridColumns: grid.gridColumns,
+    gridRows: grid.gridRows,
+    flipHorizontal,
+    iconSize: clampNumber(source.iconSize, 16, 96, DEFAULT_CONFIG.iconSize),
     led: normalizeLedConfig(source.led),
-    buttons: Array(12).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings))
+    buttons: Array(12).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings, grid.gridColumns - 1, grid.gridRows - 1))
   };
 
   ensureUniquePositions(config.buttons, warnings);
@@ -54,7 +70,7 @@ export function normalizeImportedConfig(rawConfig) {
   return { config, warnings };
 }
 
-function normalizeButton(rawButton, index, warnings = []) {
+function normalizeButton(rawButton, index, warnings = [], maxCol = 3, maxRow = 2) {
   const fallback = DEFAULT_CONFIG.buttons[index] || DEFAULT_BUTTON;
   const source = rawButton && typeof rawButton === 'object' ? rawButton : {};
   if (!rawButton || typeof rawButton !== 'object') warnings.push(`Button ${index + 1} was missing or invalid; defaults were used.`);
@@ -64,8 +80,8 @@ function normalizeButton(rawButton, index, warnings = []) {
     ...source,
     id: `btn_${index + 1}`,
     name: source.name || `Button ${index + 1}`,
-    col: Number.isInteger(parseInt(source.col, 10)) ? Math.max(0, Math.min(3, parseInt(source.col, 10))) : fallback.col,
-    row: Number.isInteger(parseInt(source.row, 10)) ? Math.max(0, Math.min(2, parseInt(source.row, 10))) : fallback.row,
+    col: Number.isInteger(parseInt(source.col, 10)) ? Math.max(0, Math.min(maxCol, parseInt(source.col, 10))) : fallback.col,
+    row: Number.isInteger(parseInt(source.row, 10)) ? Math.max(0, Math.min(maxRow, parseInt(source.row, 10))) : fallback.row,
     label: String(source.label ?? fallback.label ?? `Btn ${index + 1}`).slice(0, 40),
     font: ['roboto_12', 'roboto_16', 'arimo14'].includes(source.font) ? source.font : fallback.font,
     color: normalizeColor(source.color) || fallback.color,
@@ -81,7 +97,7 @@ function normalizeButton(rawButton, index, warnings = []) {
     rawBlocks: Array.isArray(source.rawBlocks) ? source.rawBlocks : []
   };
 
-  if (btn.col !== source.col || btn.row !== source.row) warnings.push(`Button ${index + 1} position was normalized into the 4x3 grid.`);
+  if (btn.col !== source.col || btn.row !== source.row) warnings.push(`Button ${index + 1} position was normalized into the ${maxCol + 1}x${maxRow + 1} grid.`);
   if (!normalizeColor(source.color || btn.color)) warnings.push(`Button ${index + 1} color was invalid; default color was used.`);
   return btn;
 }

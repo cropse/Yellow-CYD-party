@@ -105,73 +105,16 @@ export function generateRandomPassword(length = 12) {
   return password;
 }
 
-const FALLBACK_DEFAULT_BOARD_ID = 'esp32-2432s028-2port';
-
-const FALLBACK_BOARD_CONFIGS = {
-  'esp32-2432s028-2port': {
-    id: 'esp32-2432s028-2port',
-    width: 320,
-    height: 240,
-    capabilities: { rgbLed: true },
-    hardware: {
-      esp32: { board: 'esp32dev', framework: 'arduino' },
-      display: { driver: 'ili9xxx', model: 'TFT 2.4R', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, dc_pin: { number: 2, ignore_strapping_warning: true }, invert_colors: false, color_palette: '8BIT', transform: { swap_xy: true } },
-      touch: { driver: 'xpt2046', spi_id: 'touch', cs_pin: 33, interrupt_pin: 36, threshold: 400, calibration: { x_min: 280, x_max: 3860, y_min: 340, y_max: 3860 }, transform: { swap_xy: true } },
-      backlight: { pin: 'GPIO21' },
-      rgbLed: { redPin: 'GPIO4', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
-    }
-  },
-  'esp32-e32r28t': {
-    id: 'esp32-e32r28t',
-    width: 320,
-    height: 240,
-    capabilities: { rgbLed: false },
-    hardware: {
-      esp32: { board: 'esp32dev', framework: 'arduino' },
-      display: { driver: 'ili9341', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, dc_pin: { number: 2, ignore_strapping_warning: true }, invert_colors: false, color_palette: '8BIT', transform: { swap_xy: true } },
-      touch: { driver: 'xpt2046', spi_id: 'touch', cs_pin: 33, interrupt_pin: 36, threshold: 400, calibration: { x_min: 280, x_max: 3860, y_min: 340, y_max: 3860 }, transform: { swap_xy: true } },
-      backlight: { pin: 'GPIO21' }
-    }
-  },
-  'esp32-3248s035c': {
-    id: 'esp32-3248s035c',
-    width: 480,
-    height: 320,
-    capabilities: { rgbLed: true },
-    hardware: {
-      esp32: { board: 'esp32dev', framework: 'arduino' },
-      display: { driver: 'st7796', color_order: 'BGR', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, dc_pin: { number: 2, ignore_strapping_warning: true }, invert_colors: false, color_palette: '8BIT', transform: { swap_xy: true } },
-      touch: { driver: 'xpt2046', spi_id: 'tft', cs_pin: { number: 15, ignore_strapping_warning: true }, interrupt_pin: 36, threshold: 400, calibration: { x_min: 200, x_max: 3900, y_min: 200, y_max: 3900 }, transform: { swap_xy: true, mirror_x: true } },
-      backlight: { pin: 'GPIO27' },
-      rgbLed: { redPin: 'GPIO22', greenPin: 'GPIO16', bluePin: 'GPIO17', inverted: true }
-    }
-  },
-  'esp32-e32r35t': null,
-  'esp32-e32r40t': null,
-  'guition-jc4827543c': {
-    id: 'guition-jc4827543c',
-    width: 480,
-    height: 272,
-    capabilities: { rgbLed: false },
-    hardware: {
-      esp32: { board: 'esp32-s3-devkitc-1', variant: 'esp32s3', flash_size: '4MB', framework: 'esp-idf', psram: 'octal 80MHz', platformio_options: { 'board_build.flash_mode': 'dio' } },
-      display: { driver: 'qspi_dbi', model: 'CUSTOM', qspi: { clk: 'GPIO47', d0: 'GPIO21', d1: 'GPIO48', d2: 'GPIO40', d3: 'GPIO39', cs: { number: 'GPIO45', ignore_strapping_warning: true }, spi_id: 'quad_spi' }, data_rate: '20MHz', invert_colors: true, rotation: 0, init_sequence: [] },
-      touch: { driver: 'gt911', i2c: { id: 'bus_a', sda: 'GPIO8', scl: 'GPIO4', interrupt: { number: 'GPIO3', ignore_strapping_warning: true }, reset: 'GPIO38' }, transform: { mirror_x: true, mirror_y: true } },
-      backlight: { pin: 'GPIO1', frequency: '1000Hz' }
-    }
-  }
-};
-FALLBACK_BOARD_CONFIGS['esp32-e32r35t'] = { ...FALLBACK_BOARD_CONFIGS['esp32-3248s035c'], id: 'esp32-e32r35t' };
-FALLBACK_BOARD_CONFIGS['esp32-e32r40t'] = { ...FALLBACK_BOARD_CONFIGS['esp32-3248s035c'], id: 'esp32-e32r40t' };
-
 function resolveBoardConfig(config, deps) {
-  const defaultBoardId = deps.DEFAULT_BOARD_ID || deps.defaultBoardId || FALLBACK_DEFAULT_BOARD_ID;
+  if (!deps.getBoardConfig) {
+    throw new Error('generateFullYAML requires deps.getBoardConfig from config.js');
+  }
+  const defaultBoardId = deps.DEFAULT_BOARD_ID || 'esp32-2432s028-2port';
   const requestedBoard = config?.board;
   const hasBoard = typeof requestedBoard === 'string' && requestedBoard.trim();
-  const isSupported = deps.isSupportedBoard || ((id) => id in (deps.BOARD_CONFIGS || FALLBACK_BOARD_CONFIGS));
+  const isSupported = deps.isSupportedBoard || ((id) => id in deps.BOARD_CONFIGS);
   const boardId = hasBoard && isSupported(requestedBoard) ? requestedBoard : defaultBoardId;
-  const getBoardConfig = deps.getBoardConfig || ((id) => (deps.BOARD_CONFIGS || FALLBACK_BOARD_CONFIGS)[id] || null);
-  return getBoardConfig(boardId) || getBoardConfig(defaultBoardId) || FALLBACK_BOARD_CONFIGS[FALLBACK_DEFAULT_BOARD_ID];
+  return deps.getBoardConfig(boardId) || deps.getBoardConfig(defaultBoardId);
 }
 
 export function generateSubstitutions(config, deps) {
@@ -273,7 +216,7 @@ function generateLightSection(includeRgb) {
     restore_mode: ALWAYS_ON${rgbLight}`;
 }
 
-function generateCydHardwareConfig(boardConfig) {
+function generateCydHardwareConfig(boardConfig, config, deps) {
   const hardware = boardConfig.hardware;
   const display = hardware.display;
   const touch = hardware.touch;
@@ -282,7 +225,11 @@ function generateCydHardwareConfig(boardConfig) {
     model: ${display.model}` : '';
   const colorOrder = display.color_order ? `
     color_order: ${display.color_order}` : '';
-  const touchTransform = Object.entries(touch.transform || {}).map(([key, value]) => `      ${key}: ${value}`).join('\n');
+  const flip = Boolean(config?.flipHorizontal);
+  const displayTransformObj = flip ? composeTransform(display.transform, true) : (display.transform || {});
+  const touchTransformObj = flip ? composeTransform(touch.transform, true) : (touch.transform || {});
+  const displayTransform = Object.entries(displayTransformObj).map(([key, value]) => `      ${key}: ${value}`).join('\n');
+  const touchTransform = Object.entries(touchTransformObj).map(([key, value]) => `      ${key}: ${value}`).join('\n');
   const spiSection = touch.spi_id === 'tft' ? `spi:
   - id: tft
     clk_pin: 14
@@ -331,7 +278,7 @@ ${pinBlock(display.dc_pin, 6)}
     update_interval: never
     auto_clear_enabled: false
     transform:
-      swap_xy: ${display.transform?.swap_xy === true}
+${displayTransform}
     dimensions:
       width: \${width}
       height: \${height}
@@ -360,7 +307,7 @@ ${touchTransform}
             - light.turn_on: display_backlight`;
 }
 
-function generateGuitionHardwareConfig(boardConfig) {
+function generateGuitionHardwareConfig(boardConfig, config, deps) {
   const hardware = boardConfig.hardware;
   const qspi = hardware.display.qspi;
   const touch = hardware.touch;
@@ -374,7 +321,12 @@ function generateGuitionHardwareConfig(boardConfig) {
   }).join('\n')}` : '';
   const i2cId = touch.i2c.id ? `\n    i2c_id: ${touch.i2c.id}` : '';
   const backlightFreq = hardware.backlight.frequency ? `\n    frequency: ${hardware.backlight.frequency}` : '';
-  const displayTransform = hardware.display.transform ? `\n    transform:\n${Object.entries(hardware.display.transform).map(([k, v]) => `      ${k}: ${v}`).join('\n')}` : '';
+  const flip = Boolean(config?.flipHorizontal);
+  const composedDisplayTransform = flip ? composeTransform(hardware.display.transform, true) : (hardware.display.transform || {});
+  const composedTouchTransform = flip ? composeTransform(hardware.touch.transform, true) : (hardware.touch.transform || {});
+  const displayTransform = Object.keys(composedDisplayTransform).length > 0
+    ? `\n    transform:\n${Object.entries(composedDisplayTransform).map(([k, v]) => `      ${k}: ${v}`).join('\n')}`
+    : '';
   esphomeOpts.on_boot = `\n    - priority: -100\n      then:\n        - component.update: main_display`;
 
   return `${generateCoreHardwareConfig(hardware.esp32, esphomeOpts)}
@@ -420,8 +372,7 @@ touchscreen:
     interrupt_pin:${touch.i2c.interrupt && typeof touch.i2c.interrupt === 'object' ? `\n${pinBlock(touch.i2c.interrupt, 6)}` : ` ${pinValue(touch.i2c.interrupt)}`}
     reset_pin: ${touch.i2c.reset}
     transform:
-      mirror_x: ${touch.transform?.mirror_x === true}
-      mirror_y: ${touch.transform?.mirror_y === true}
+${Object.entries(composedTouchTransform).map(([k, v]) => `      ${k}: ${v}`).join('\n')}
     on_touch:
       then:
         - if:
@@ -435,16 +386,17 @@ touchscreen:
 
 export function generateHardwareConfig(boardConfig, config, deps) {
   if (!boardConfig?.hardware) return deps.hardwareConfig || '';
-  if (boardConfig.id === 'esp32-2432s028-2port' && deps.hardwareConfig) return deps.hardwareConfig;
-  if (boardConfig.hardware.display?.qspi || boardConfig.hardware.touch?.driver === 'gt911') return generateGuitionHardwareConfig(boardConfig);
-  return generateCydHardwareConfig(boardConfig);
+  if (boardConfig.id === 'esp32-2432s028-2port' && deps.hardwareConfig && !config?.flipHorizontal) return deps.hardwareConfig;
+  if (boardConfig.hardware.display?.qspi || boardConfig.hardware.touch?.driver === 'gt911') return generateGuitionHardwareConfig(boardConfig, config, deps);
+  return generateCydHardwareConfig(boardConfig, config, deps);
 }
 
 export function generateFontSection(buttons, deps) {
-  const { defaultButton, yamlQuoted } = deps;
+  const { defaultButton, yamlQuoted, config } = deps;
   const glyphs = extractGlyphs(buttons);
   const safeGlyphs = glyphs.length ? glyphs : [defaultButton.icon];
   const glyphList = safeGlyphs.map(g => `      - ${yamlQuoted(g)}`).join('\n');
+  const iconSize = (config && config.iconSize) || 48;
 
   return `font:
   - file:
@@ -481,7 +433,7 @@ export function generateFontSection(buttons, deps) {
       - "abcdefghijklmnopqrstuvwxyz"
   - file: \${font_directory}materialdesignicons-webfont.ttf
     id: mdi_icons
-    size: 48
+    size: ${iconSize}
     glyphs:
 ${glyphList}`;
 }
@@ -679,7 +631,11 @@ export function generateLVGLWidgets(buttons, deps) {
     return a.col - b.col;
   });
 
+  const gridColumns = deps.config?.gridColumns ?? 4;
+  const gridRows = deps.config?.gridRows ?? 3;
+
   sorted.forEach(btn => {
+    if (btn.col >= gridColumns || btn.row >= gridRows) return;
     const isCheckable = btn.type === 'checkable';
     const hasTimerDefaultLabel = isCheckable && btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim();
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;
@@ -713,7 +669,7 @@ ${fontLine}                     label: ${yamlQuoted(btn.label)}`);
   return widgets.join('\n');
 }
 
-function calculateLVGLLayoutScale(boardConfig) {
+export function calculateLVGLLayoutScale(boardConfig, gridColumns = 4, gridRows = 3) {
   const width = Number(boardConfig?.width) || 320;
   const height = Number(boardConfig?.height) || 240;
   const scale = Math.min(width / 320, height / 240);
@@ -722,14 +678,18 @@ function calculateLVGLLayoutScale(boardConfig) {
   return {
     gap,
     outerMargin: gap,
-    cellWidth: Math.floor((width - gap * 2 - gap * 3) / 4),
-    cellHeight: Math.floor((height - gap * 2 - gap * 2) / 3)
+    cellWidth: Math.floor((width - gap * 2 - gap * (gridColumns - 1)) / gridColumns),
+    cellHeight: Math.floor((height - gap * 2 - gap * (gridRows - 1)) / gridRows)
   };
 }
 
 export function generateLVGLSection(buttons, deps) {
   const widgets = generateLVGLWidgets(buttons, deps);
-  const { outerMargin } = calculateLVGLLayoutScale(deps.boardConfig);
+  const gridColumns = deps.config?.gridColumns ?? 4;
+  const gridRows = deps.config?.gridRows ?? 3;
+  const { outerMargin } = calculateLVGLLayoutScale(deps.boardConfig, gridColumns, gridRows);
+  const gridColumnsArr = Array(gridColumns).fill('fr(1)');
+  const gridRowsArr = Array(gridRows).fill('fr(1)');
 
   return `lvgl:
   on_idle:
@@ -768,8 +728,8 @@ export function generateLVGLSection(buttons, deps) {
             bg_color: room_bg_color
             layout:
               type: grid
-              grid_columns: [fr(1), fr(1), fr(1), fr(1)]
-              grid_rows: [fr(1), fr(1), fr(1)]
+              grid_columns: [${gridColumnsArr.join(', ')}]
+              grid_rows: [${gridRowsArr.join(', ')}]
             pad_all: ${outerMargin}px
             outline_pad: ${outerMargin}px
             widgets:
@@ -844,4 +804,18 @@ export function highlightYAML(text) {
     highlighted = highlighted.replace(/(\s*-\s+)(#.*)$/, '$1<span class="comment">$2</span>');
     return highlighted;
   }).join('\n');
+}
+
+/**
+ * Compose a flipHorizontal toggle with the board's built-in transform.
+ * Produces the effective transform for a responsive flip option.
+ *
+ * Composition rule: XOR flipHorizontal with board mirror_x.
+ * All other transform keys (swap_xy, mirror_y, rotation, etc.) pass through unchanged.
+ * mirror_x is always emitted in the output (even false) for consistency.
+ */
+export function composeTransform(boardTransform, flipHorizontal) {
+  const boardMirrorX = Boolean(boardTransform?.mirror_x);
+  const effectiveMirrorX = boardMirrorX !== Boolean(flipHorizontal);
+  return { ...(boardTransform || {}), mirror_x: effectiveMirrorX };
 }

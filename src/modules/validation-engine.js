@@ -1,4 +1,4 @@
-import { isSupportedBoard } from './config.js';
+import { isSupportedBoard, isGridAllowedForBoard, getBoardConfig, DEFAULT_CONFIG } from './config.js';
 
 /**
  * Validation Engine - Pure validation logic for CYD configurations.
@@ -51,6 +51,29 @@ export function validateConfig(config, deps = {}) {
     issues.errors.push({ message: 'Display timeout must be between 90 and 3600 seconds.', selector: '#display-timeout' });
   }
 
+  const boardConfig = getBoardConfig(config.board);
+  const gridCols = config.gridColumns;
+  const gridRows = config.gridRows;
+
+  if (gridCols !== undefined && gridRows !== undefined) {
+    if (!Number.isInteger(gridCols) || !Number.isInteger(gridRows) || gridCols < 1 || gridRows < 1) {
+      issues.errors.push({ message: `Grid dimensions must be positive integers (got columns: ${gridCols}, rows: ${gridRows}).`, selector: '#grid-columns' });
+    } else if (boardConfig && !isGridAllowedForBoard(boardConfig, gridCols, gridRows)) {
+      issues.errors.push({ message: `Grid ${gridCols}x${gridRows} is not supported for board "${config.board}".`, selector: '#grid-columns' });
+    }
+  }
+
+  if (config.flipHorizontal !== undefined && typeof config.flipHorizontal !== 'boolean') {
+    issues.errors.push({ message: 'flipHorizontal must be a boolean value (true or false).', selector: '#flip-horizontal' });
+  }
+
+  if (config.iconSize !== undefined) {
+    const iconSize = Number(config.iconSize);
+    if (!Number.isFinite(iconSize) || !Number.isInteger(iconSize) || iconSize < 16 || iconSize > 96) {
+      issues.errors.push({ message: 'Icon size must be an integer between 16 and 96.', selector: '#icon-size' });
+    }
+  }
+
   if (looksLikeSecret(config.deviceName, 'deviceName')) {
     issues.warnings.push({ message: 'Device name looks like a secret or credential; use a non-sensitive hostname.', selector: '#device-name' });
   }
@@ -74,8 +97,10 @@ export function validateConfig(config, deps = {}) {
       issues.errors.push({ message: `Button ${i + 1} icon must be a Material Design Icon codepoint like \\U000F0594.`, selector: i === selectedButtonIndex ? '#icon-picker-trigger' : null });
     }
 
-    if (!Number.isInteger(btn.col) || btn.col < 0 || btn.col > 3 || !Number.isInteger(btn.row) || btn.row < 0 || btn.row > 2) {
-      issues.errors.push({ message: `Button ${i + 1} position must be inside the 4x3 grid.`, selector: null });
+    const maxCol = Number.isInteger(config.gridColumns) ? config.gridColumns - 1 : DEFAULT_CONFIG.gridColumns - 1;
+    const maxRow = Number.isInteger(config.gridRows) ? config.gridRows - 1 : DEFAULT_CONFIG.gridRows - 1;
+    if (!Number.isInteger(btn.col) || btn.col < 0 || btn.col > maxCol || !Number.isInteger(btn.row) || btn.row < 0 || btn.row > maxRow) {
+      issues.errors.push({ message: `Button ${i + 1} position must be inside the ${config.gridColumns || DEFAULT_CONFIG.gridColumns}x${config.gridRows || DEFAULT_CONFIG.gridRows} grid.`, selector: null });
     }
 
     const position = `${btn.col},${btn.row}`;
