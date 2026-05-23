@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { PRESETS, DEFAULT_CONFIG, DEFAULT_BUTTON, ACTION_SCHEMAS, DEFAULT_BOARD_ID } from '../config.js';
+import { PRESETS, DEFAULT_CONFIG, DEFAULT_BUTTON, ACTION_SCHEMAS, DEFAULT_BOARD_ID, BOARD_CONFIGS, getBoardConfig, isSupportedBoard } from '../config.js';
 import { normalizeImportedConfig } from '../import.js';
 import { generateFullYAML } from '../yaml-engine.js';
 import { normalizeColor, clampNumber } from '../utils.js';
@@ -18,6 +18,10 @@ const deps = {
   defaultConfig: DEFAULT_CONFIG,
   actionSchemas: ACTION_SCHEMAS,
   normalizeImportedConfig,
+  BOARD_CONFIGS,
+  getBoardConfig,
+  isSupportedBoard,
+  DEFAULT_BOARD_ID,
 };
 
 function generateWithPreset(presetName) {
