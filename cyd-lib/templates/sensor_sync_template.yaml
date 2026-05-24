@@ -16,7 +16,7 @@ text_sensor:
             text: !lambda |-
               auto unit = id(${ts_id}_unit).state;
               if (x == "unknown" || x == "unavailable" || x == "") {
-                return "${default_label}";
+                return "--";
               }
               if (unit == "") {
                 return x.c_str();
@@ -39,7 +39,7 @@ interval:
             auto state = id(${ts_id}_state).state;
             auto unit = id(${ts_id}_unit).state;
             if (state == "unknown" || state == "unavailable" || state == "") {
-              return "${default_label}";
+              return "--";
             }
             if (unit == "") {
               return state.c_str();

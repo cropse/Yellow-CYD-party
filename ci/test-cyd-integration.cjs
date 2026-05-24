@@ -292,41 +292,41 @@ const { chromium } = require('playwright-core');
     }
   } catch (e) { failed++; failures.push({ t: 'T22', msg: e.message }); }
 
-  // T13: Board selector visible in Global Settings
+  // T26: Board selector visible in Global Settings
   try {
     const boardSelect = page.locator('#board-select');
     const count = await boardSelect.count();
     const tagName = count > 0 ? await boardSelect.first().evaluate(el => el.tagName.toLowerCase()) : '';
     if (count > 0 && tagName === 'select') {
-      passed++; console.log('✅ T13: Board selector visible in Global Settings');
+      passed++; console.log('✅ T26: Board selector visible in Global Settings');
     } else {
-      failed++; failures.push({ t: 'T13', msg: `count=${count} tag=${tagName || 'missing'}` });
+      failed++; failures.push({ t: 'T26', msg: `count=${count} tag=${tagName || 'missing'}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T13', msg: e.message }); }
 
-  // T14: Default selected board is esp32-2432s028-2port
+  // T27: Default selected board is esp32-2432s028-2port
   try {
     const boardSelect = page.locator('#board-select');
     const count = await boardSelect.count();
     const value = count > 0 ? await boardSelect.inputValue() : '';
     if (value === 'esp32-2432s028-2port') {
-      passed++; console.log('✅ T14: Default board selected');
+      passed++; console.log('✅ T27: Default board selected');
     } else {
-      failed++; failures.push({ t: 'T14', msg: `expected esp32-2432s028-2port got ${value || 'missing'}` });
+      failed++; failures.push({ t: 'T27', msg: `expected esp32-2432s028-2port got ${value || 'missing'}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T14', msg: e.message }); }
 
-  // T15: Board selector has 6 options
+  // T28: Board selector has 6 options
   try {
     const options = await page.locator('#board-select option').count();
     if (options === 6) {
-      passed++; console.log('✅ T15: Board selector has 6 options');
+      passed++; console.log('✅ T28: Board selector has 6 options');
     } else {
-      failed++; failures.push({ t: 'T15', msg: `expected 6 options got ${options}` });
+      failed++; failures.push({ t: 'T28', msg: `expected 6 options got ${options}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T15', msg: e.message }); }
 
-  // T16: Selecting Guition hides/disables RGB LED controls
+  // T29: Selecting Guition hides/disables RGB LED controls
   try {
     const boardSelect = page.locator('#board-select');
     if (await boardSelect.count()) {
@@ -335,13 +335,13 @@ const { chromium } = require('playwright-core');
     }
     const rgbControlsVisible = await page.locator('#rgb-led-controls').isVisible();
     if (!rgbControlsVisible) {
-      passed++; console.log('✅ T16: Guition hides RGB LED controls');
+      passed++; console.log('✅ T29: Guition hides RGB LED controls');
     } else {
-      failed++; failures.push({ t: 'T16', msg: '#rgb-led-controls still visible' });
+      failed++; failures.push({ t: 'T29', msg: '#rgb-led-controls still visible' });
     }
   } catch (e) { failed++; failures.push({ t: 'T16', msg: e.message }); }
 
-  // T17: Generated YAML reflects Guition
+  // T30: Generated YAML reflects Guition
   try {
     const boardSelect = page.locator('#board-select');
     if (await boardSelect.count()) {
@@ -352,13 +352,13 @@ const { chromium } = require('playwright-core');
     const hasDimensions = yamlText.includes('width: "480"') || yamlText.includes('width: 480') || yamlText.includes('height: "272"') || yamlText.includes('height: 272');
     const hasFramework = /ESP32-S3|esp32-s3|esp-idf/i.test(yamlText);
     if (hasDimensions && hasFramework) {
-      passed++; console.log('✅ T17: Generated YAML reflects Guition');
+      passed++; console.log('✅ T30: Generated YAML reflects Guition');
     } else {
-      failed++; failures.push({ t: 'T17', msg: `dimensions=${hasDimensions} framework=${hasFramework}` });
+      failed++; failures.push({ t: 'T30', msg: `dimensions=${hasDimensions} framework=${hasFramework}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T17', msg: e.message }); }
 
-  // T18: Selecting back to default restores RGB controls
+  // T31: Selecting back to default restores RGB controls
   try {
     const boardSelect = page.locator('#board-select');
     if (await boardSelect.count()) {
@@ -367,13 +367,13 @@ const { chromium } = require('playwright-core');
     }
     const rgbControlsVisible = await page.locator('#rgb-led-controls').isVisible();
     if (rgbControlsVisible) {
-      passed++; console.log('✅ T18: Default board restores RGB controls');
+      passed++; console.log('✅ T31: Default board restores RGB controls');
     } else {
-      failed++; failures.push({ t: 'T18', msg: '#rgb-led-controls not visible after default board selected' });
+      failed++; failures.push({ t: 'T31', msg: '#rgb-led-controls not visible after default board selected' });
     }
   } catch (e) { failed++; failures.push({ t: 'T18', msg: e.message }); }
 
-  // T19: Board switch updates YAML dimensions
+  // T32: Board switch updates YAML dimensions
   try {
     const boardSelect = page.locator('#board-select');
     if (await boardSelect.count()) {
@@ -384,11 +384,11 @@ const { chromium } = require('playwright-core');
     const hasWidth = yamlText.includes('width: "480"') || yamlText.includes('width: 480');
     const hasHeight = yamlText.includes('height: "320"') || yamlText.includes('height: 320');
     if (hasWidth && hasHeight) {
-      passed++; console.log('✅ T19: Board switch updates YAML dimensions');
+      passed++; console.log('✅ T32: Board switch updates YAML dimensions');
     } else {
-      failed++; failures.push({ t: 'T19', msg: `width480=${hasWidth} height320=${hasHeight}` });
+      failed++; failures.push({ t: 'T32', msg: `width480=${hasWidth} height320=${hasHeight}` });
     }
-  } catch (e) { failed++; failures.push({ t: 'T19', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T32', msg: e.message }); }
 
   // T23: Sensor sync button type selection shows HA entity field
   try {

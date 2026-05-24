@@ -542,7 +542,7 @@ export function generatePackages(buttons, deps) {
 
     const escapedState = String(btn.onState || 'on').replace(/"/g, '\\"');
 
-    if (btn.type === 'timer_sync' || (btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim())) {
+    if (btn.type === 'timer_sync') {
       const timerLabel = (btn.timerDefaultLabel || btn.label || '').replace(/"/g, '\\"');
       packages.push(`  btn_timer_${i + 1}: !include
     file: cyd-lib/templates/timer_sync_template.yaml
