@@ -1,0 +1,49 @@
+# sensor_sync_template.yaml
+substitutions:
+  ts_id: ""
+  ha_entity: ""
+  btn_id: ""
+  default_label: ""
+
+text_sensor:
+  - platform: homeassistant
+    id: ${ts_id}_state
+    entity_id: ${ha_entity}
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_text_${btn_id}
+            text: !lambda |-
+              auto unit = id(${ts_id}_unit).state;
+              if (x == "unknown" || x == "unavailable" || x == "") {
+                return "${default_label}";
+              }
+              if (unit == "") {
+                return x.c_str();
+              }
+              char buf[64];
+              snprintf(buf, sizeof(buf), "%s%s", x.c_str(), unit.c_str());
+              return buf;
+
+  - platform: homeassistant
+    id: ${ts_id}_unit
+    entity_id: ${ha_entity}
+    attribute: unit_of_measurement
+
+interval:
+  - interval: 5s
+    then:
+      - lvgl.label.update:
+          id: lbl_text_${btn_id}
+          text: !lambda |-
+            auto state = id(${ts_id}_state).state;
+            auto unit = id(${ts_id}_unit).state;
+            if (state == "unknown" || state == "unavailable" || state == "") {
+              return "${default_label}";
+            }
+            if (unit == "") {
+              return state.c_str();
+            }
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%s%s", state.c_str(), unit.c_str());
+            return buf;

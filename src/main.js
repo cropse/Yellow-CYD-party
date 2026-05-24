@@ -528,9 +528,10 @@ function renderEditorPanel() {
     b.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
 
-  const isCheckableOrTimer = btn.type === 'checkable' || btn.type === 'timer_sync';
-  document.getElementById('checkable-options').classList.toggle('hidden', !isCheckableOrTimer);
-  document.getElementById('checkable-icons').classList.toggle('hidden', !isCheckableOrTimer);
+  const hasHomeAssistantEntity = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'sensor_sync';
+  const hasCheckableIcons = btn.type === 'checkable' || btn.type === 'timer_sync';
+  document.getElementById('checkable-options').classList.toggle('hidden', !hasHomeAssistantEntity);
+  document.getElementById('checkable-icons').classList.toggle('hidden', !hasCheckableIcons);
   document.getElementById('timer-default-label-group')?.classList.toggle('hidden', btn.type !== 'timer_sync');
   document.getElementById('ha-entity').value = btn.haEntity || '';
   document.getElementById('on-state').value = btn.onState || 'on';
@@ -1075,9 +1076,10 @@ function setupButtonEditor() {
       });
       btn.classList.add('active');
       btn.setAttribute('aria-checked', 'true');
-      const isCheckableOrTimer = type === 'checkable' || type === 'timer_sync';
-      document.getElementById('checkable-options').classList.toggle('hidden', !isCheckableOrTimer);
-      document.getElementById('checkable-icons').classList.toggle('hidden', !isCheckableOrTimer);
+      const hasHomeAssistantEntity = type === 'checkable' || type === 'timer_sync' || type === 'sensor_sync';
+      const hasCheckableIcons = type === 'checkable' || type === 'timer_sync';
+      document.getElementById('checkable-options').classList.toggle('hidden', !hasHomeAssistantEntity);
+      document.getElementById('checkable-icons').classList.toggle('hidden', !hasCheckableIcons);
       document.getElementById('timer-default-label-group')?.classList.toggle('hidden', type !== 'timer_sync');
     });
   });

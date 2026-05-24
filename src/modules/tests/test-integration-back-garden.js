@@ -224,6 +224,17 @@ describe('Back Garden preset - YAML parity', () => {
     assert.ok(generated.includes('timer_sync_template.yaml'));
   });
 
+  // ── Sensor sync fixture definitions ─────────────────────────
+  // Used by Tasks 5, 6, 8, 9, 10 for sensor_sync button type
+  const sensorSyncGoldenFixtures = {
+    // Expected sensor_sync package entry for sensor.gecko_sensor_humidity
+    sensorPackage: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity' },
+    // Expected display strings for sensor values with/without unit
+    displayWithUnit: '54%',
+    displayNoUnit: '123',
+    displayFallback: '--',
+  };
+
   it('btn_8 (checkable) has btn_logic_8', () => {
     assert.ok(generated.includes('btn_logic_8'));
   });

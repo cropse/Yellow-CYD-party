@@ -538,7 +538,7 @@ export function generatePackages(buttons, deps) {
   const btnList = isArray ? buttons : (buttons?.buttons || []);
 
   btnList.forEach((btn, i) => {
-    if (!['checkable', 'timer_sync'].includes(btn.type) || !String(btn.haEntity || '').trim()) return;
+    if (!['checkable', 'timer_sync', 'sensor_sync'].includes(btn.type) || !String(btn.haEntity || '').trim()) return;
 
     const escapedState = String(btn.onState || 'on').replace(/"/g, '\\"');
 
@@ -551,6 +551,15 @@ export function generatePackages(buttons, deps) {
       ha_entity: ${yamlScalar(btn.haEntity)}
       btn_id: ${btn.id}
       default_label: ${yamlQuoted(timerLabel)}`);
+    } else if (btn.type === 'sensor_sync') {
+      const sensorLabel = (btn.label || '').replace(/"/g, '\\"');
+      packages.push(`  btn_sensor_${i + 1}: !include
+    file: cyd-lib/templates/sensor_sync_template.yaml
+    vars:
+      ts_id: ts_${btn.id}_sensor
+      ha_entity: ${yamlScalar(btn.haEntity)}
+      btn_id: ${btn.id}
+      default_label: ${yamlQuoted(sensorLabel)}`);
     } else {
       const iconOn = btn.iconOn || btn.icon;
       const iconOff = btn.iconOff || btn.icon;

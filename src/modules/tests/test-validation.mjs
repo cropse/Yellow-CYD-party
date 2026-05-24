@@ -341,6 +341,89 @@ describe('validateConfig - button-level validation', () => {
     assert.strictEqual(entityErrors.length, 1);
   });
 
+  // ── Sensor sync validation tests (Task 5) ──────────────────
+  test('sensor_sync button with valid sensor entity passes', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = 'sensor.gecko_sensor_humidity';
+    const result = validateConfig(cfg);
+    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
+    assert.strictEqual(sensorErrors.length, 0);
+  });
+
+  test('sensor_sync button with blank entity returns error', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = '';
+    const result = validateConfig(cfg);
+    const entityErrors = result.errors.filter(e => e.message.includes('needs a Home Assistant entity'));
+    assert.strictEqual(entityErrors.length, 1);
+  });
+
+  test('sensor_sync button with null entity returns error', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = null;
+    const result = validateConfig(cfg);
+    const entityErrors = result.errors.filter(e => e.message.includes('needs a Home Assistant entity'));
+    assert.strictEqual(entityErrors.length, 1);
+  });
+
+  test('sensor_sync button with non-sensor domain returns error', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = 'switch.garden_lights';
+    const result = validateConfig(cfg);
+    const domainErrors = result.errors.filter(e => e.message.includes('requires a sensor.* entity'));
+    assert.strictEqual(domainErrors.length, 1);
+    assert.ok(domainErrors[0].message.includes('switch.garden_lights'));
+  });
+
+  test('sensor_sync button does not require onState or icon icons', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = 'sensor.temperature';
+    cfg.buttons[0].onState = '';
+    cfg.buttons[0].iconOn = '';
+    cfg.buttons[0].iconOff = '';
+    const result = validateConfig(cfg);
+    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
+    assert.strictEqual(sensorErrors.length, 0);
+  });
+
+  test('sensor_sync button does not require timerDefaultLabel', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = 'sensor.gecko_sensor_humidity';
+    cfg.buttons[0].timerDefaultLabel = '';
+    const result = validateConfig(cfg);
+    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
+    assert.strictEqual(sensorErrors.length, 0);
+  });
+
+  test('sensor_sync button with timerDefaultLabel set does not error', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].haEntity = 'sensor.gecko_sensor_humidity';
+    cfg.buttons[0].timerDefaultLabel = 'My Sensor';
+    const result = validateConfig(cfg);
+    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
+    assert.strictEqual(sensorErrors.length, 0);
+  });
+
+  // ── Sensor sync fixture definitions ─────────────────────────
+  // Used by Tasks 5, 6, 8, 9, 10 for sensor_sync button type
+  const sensorSyncValidationFixtures = {
+    // Happy-path: sensor.gecko_sensor_humidity with valid domain
+    validSensorEntity: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', onState: '', iconOn: '', iconOff: '' },
+    // Invalid domain: switch.* should fail domain validation (Task 5)
+    invalidDomain: { type: 'sensor_sync', haEntity: 'switch.garden_lights', onState: '', iconOn: '', iconOff: '' },
+    // Blank entity: empty string should fail entity validation
+    blankEntity: { type: 'sensor_sync', haEntity: '', onState: '', iconOn: '', iconOff: '' },
+    // Null entity: should fail entity validation
+    nullEntity: { type: 'sensor_sync', haEntity: null, onState: '', iconOn: '', iconOff: '' },
+  };
+
   test('checkable button with missing onState returns error', () => {
     const cfg = makeValidConfig();
     cfg.buttons[0].type = 'checkable';

@@ -217,6 +217,61 @@ describe('normalizeImportedConfig - button-level', () => {
     assert.strictEqual(config.buttons[0].iconOn, '\\U000F0001');
     assert.strictEqual(config.buttons[0].iconOff, '\\U000F0002');
   });
+
+  // ── sensor_sync import tests (Task 5) ───────────────────────
+  it('sensor_sync type is preserved in import', () => {
+    const { config } = normalizeImportedConfig({ buttons: [
+      { ...baseBtn, type: 'sensor_sync', haEntity: 'sensor.temperature', iconOn: '', iconOff: '' },
+      ...Array(11).fill(baseBtn)
+    ]});
+    assert.strictEqual(config.buttons[0].type, 'sensor_sync');
+    assert.strictEqual(config.buttons[0].haEntity, 'sensor.temperature');
+  });
+
+  it('sensor_sync button does not require iconOn/iconOff', () => {
+    const { config } = normalizeImportedConfig({ buttons: [
+      { ...baseBtn, type: 'sensor_sync', haEntity: 'sensor.humidity', iconOn: undefined, iconOff: undefined },
+      ...Array(11).fill(baseBtn)
+    ]});
+    assert.strictEqual(config.buttons[0].type, 'sensor_sync');
+    assert.strictEqual(config.buttons[0].haEntity, 'sensor.humidity');
+  });
+
+  it('sensor_sync type rejected as invalid falls back to stateless', () => {
+    const { config } = normalizeImportedConfig({ buttons: [
+      { ...baseBtn, type: 'sensor_sync_invalid' },
+      ...Array(11).fill(baseBtn)
+    ]});
+    assert.notStrictEqual(config.buttons[0].type, 'sensor_sync_invalid');
+  });
+
+  it('sensor_sync import preserves sensor.gecko_sensor_humidity entity', () => {
+    const { config } = normalizeImportedConfig({ buttons: [
+      { ...baseBtn, type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity' },
+      ...Array(11).fill(baseBtn)
+    ]});
+    assert.strictEqual(config.buttons[0].type, 'sensor_sync');
+    assert.strictEqual(config.buttons[0].haEntity, 'sensor.gecko_sensor_humidity');
+  });
+
+  it('sensor_sync import preserves 54% label', () => {
+    const { config } = normalizeImportedConfig({ buttons: [
+      { ...baseBtn, type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', label: '54%' },
+      ...Array(11).fill(baseBtn)
+    ]});
+    assert.strictEqual(config.buttons[0].label, '54%');
+    assert.strictEqual(config.buttons[0].type, 'sensor_sync');
+  });
+
+  it('sensor_sync does not require timerDefaultLabel on import', () => {
+    const { config } = normalizeImportedConfig({ buttons: [
+      { ...baseBtn, type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', timerDefaultLabel: undefined },
+      ...Array(11).fill(baseBtn)
+    ]});
+    assert.strictEqual(config.buttons[0].type, 'sensor_sync');
+    assert.strictEqual(config.buttons[0].haEntity, 'sensor.gecko_sensor_humidity');
+    assert.strictEqual(config.buttons[0].timerDefaultLabel, '');
+  });
 });
 
 // ── normalizePress within button ─────────────────────────────────────────

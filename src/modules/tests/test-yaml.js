@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { extractGlyphs, yamlScalar, yamlQuoted, toYAML, generateBinarySensors, generatePackages, generateLVGLWidgets, generateSubstitutions, generateColorSection, generateFontSection, generateNumberSection, generateLVGLSection, generateFullYAML } from '../yaml-engine.js';
-import { ACTION_SCHEMAS, DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED } from '../config.js';
+import { ACTION_SCHEMAS, DEFAULT_CONFIG, DEFAULT_BUTTON, DEFAULT_LED, getBoardConfig, isSupportedBoard, BOARD_CONFIGS } from '../config.js';
 import { normalizeImportedConfig } from '../import.js';
 import { yamlDoc } from '../utils.js';
 
@@ -16,6 +16,12 @@ const sectionDeps = {
     if (!Number.isFinite(n)) return fb;
     return Math.max(min, Math.min(max, n));
   },
+  yamlScalar,
+  yamlQuoted,
+  yamlDoc,
+  getBoardConfig,
+  isSupportedBoard,
+  BOARD_CONFIGS,
   defaultButton: DEFAULT_BUTTON,
   defaultConfig: DEFAULT_CONFIG,
   actionSchemas: ACTION_SCHEMAS,
@@ -260,6 +266,74 @@ describe('generatePackages', () => {
     assert.ok(out.includes('timer_sync_template') || out.includes('timer') || out.includes('packages:'));
   });
 
+  it('sensor_sync button generates sensor sync package', () => {
+    const config = { ...baseConfig, buttons: [sensorSyncFixtures.happyPath] };
+    const out = render(generatePackages(config, { ...sectionDeps, config }));
+    assert.ok(out.includes('btn_sensor_1'), 'should include btn_sensor_1 package key');
+    assert.ok(out.includes('sensor_sync_template.yaml'), 'should reference sensor_sync_template.yaml');
+    assert.ok(out.includes('ts_btn_1_sensor'), 'should pass ts_id var');
+    assert.ok(out.includes('sensor.gecko_sensor_humidity'), 'should pass ha_entity var');
+    assert.ok(out.includes('btn_id: btn_1'), 'should pass btn_id var');
+    assert.ok(out.includes('default_label:'), 'should pass default_label var');
+  });
+
+  it('sensor_sync with blank entity does NOT generate package', () => {
+    const config = { ...baseConfig, buttons: [sensorSyncFixtures.blankEntity] };
+    const out = render(generatePackages(config, { ...sectionDeps, config }));
+    assert.ok(!out.includes('btn_sensor_4'), 'should not generate package for blank entity');
+    assert.ok(!out.includes('sensor_sync_template'), 'should not reference sensor template');
+  });
+
+  it('sensor_sync with no-unit label passes default_label "123"', () => {
+    const config = { ...baseConfig, buttons: [sensorSyncFixtures.noUnit] };
+    const out = render(generatePackages(config, { ...sectionDeps, config }));
+    assert.ok(out.includes('btn_sensor_1'), 'should include btn_sensor_1 package key');
+    assert.ok(out.includes('default_label: "123"'), 'should pass label "123" as default_label');
+  });
+
+  it('sensor_sync with unavailable fallback label passes default_label "--"', () => {
+    const config = { ...baseConfig, buttons: [sensorSyncFixtures.unavailableFallback] };
+    const out = render(generatePackages(config, { ...sectionDeps, config }));
+    assert.ok(out.includes('btn_sensor_1'), 'should include btn_sensor_1 package key');
+    assert.ok(out.includes('default_label: "--"'), 'should pass label "--" as default_label');
+  });
+
+  it('sensor_sync with invalid domain still generates package (domain validation is separate)', () => {
+    const config = { ...baseConfig, buttons: [sensorSyncFixtures.invalidDomain] };
+    const out = render(generatePackages(config, { ...sectionDeps, config }));
+    assert.ok(out.includes('btn_sensor_1'), 'should generate package for invalid domain');
+    assert.ok(out.includes('sensor_sync_template.yaml'), 'should reference sensor template');
+    assert.ok(out.includes('switch.garden_lights'), 'should pass switch.garden_lights as ha_entity');
+  });
+
+  it('sensor_sync does not require onState, iconOn, iconOff, or timerDefaultLabel', () => {
+    const config = { ...baseConfig, buttons: [sensorSyncFixtures.noOptionalFields] };
+    const out = render(generatePackages(config, { ...sectionDeps, config }));
+    assert.ok(out.includes('btn_sensor_1'), 'should generate package without optional fields');
+    assert.ok(out.includes('sensor_sync_template.yaml'), 'should reference sensor_sync_template.yaml');
+    assert.ok(out.includes('default_label: "54%"'), 'should pass label "54%" as default_label');
+    assert.ok(!out.includes('on_state:'), 'should not include on_state var');
+    assert.ok(!out.includes('ico_on:'), 'should not include ico_on var');
+    assert.ok(!out.includes('ico_off:'), 'should not include ico_off var');
+  });
+
+  // ── Sensor sync fixture definitions ─────────────────────────
+  // Used by Tasks 5, 6, 8, 9, 10 for sensor_sync button type
+  const sensorSyncFixtures = {
+    // Happy-path: sensor with unit, value 54 + "%" → "54%"
+    happyPath: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_1', label: 'Sensor', col: 0, row: 0, icon: '\\U000F0335', color: 'FF0000', shortPress: { enabled: true }, longPress: { enabled: false } },
+    // No unit: numeric value 123 → "123"
+    noUnit: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_2', label: '123', col: 1, row: 0, icon: '\\U000F0335', color: '00FF00', shortPress: { enabled: true }, longPress: { enabled: false } },
+    // Invalid domain: switch entity should be rejected by domain validation
+    invalidDomain: { type: 'sensor_sync', haEntity: 'switch.garden_lights', id: 'btn_3', label: 'Invalid', col: 2, row: 0, icon: '\\U000F0335', color: '0000FF', shortPress: { enabled: true }, longPress: { enabled: false } },
+    // Blank entity: empty haEntity should be rejected by entity validation
+    blankEntity: { type: 'sensor_sync', haEntity: '', id: 'btn_4', label: 'Blank', col: 3, row: 0, icon: '\\U000F0335', color: 'FF00FF', shortPress: { enabled: true }, longPress: { enabled: false } },
+    // Unavailable fallback: label "--" shown when sensor unavailable
+    unavailableFallback: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_5', label: '--', col: 0, row: 1, icon: '\\U000F0335', color: 'FFFF00', shortPress: { enabled: true }, longPress: { enabled: false } },
+    // No optional fields: sensor_sync does not need onState, iconOn, iconOff, timerDefaultLabel
+    noOptionalFields: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_6', label: '54%', col: 1, row: 1, icon: '\\U000F0335', color: '00FFFF', shortPress: { enabled: true }, longPress: { enabled: false } },
+  };
+
   it('stateless button does NOT generate state sync', () => {
     const config = { ...baseConfig, buttons: [{ type: 'stateless', id: 'btn_1', haEntity: '' }] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
@@ -396,6 +470,16 @@ describe('generateLVGLWidgets', () => {
     }];
     const out = render(generateLVGLWidgets(btns, sectionDeps));
     assert.ok(out.includes('cyd_button_widget.yaml'));
+  });
+
+  it('sensor_sync button uses standard template', () => {
+    const btns = [{
+      type: 'sensor_sync', id: 'btn_1', col: 0, row: 0, icon: '\\U000F0335', label: 'Sensor', color: 'FF0000',
+      shortPress: { enabled: true }, longPress: { enabled: false }
+    }];
+    const out = render(generateLVGLWidgets(btns, sectionDeps));
+    assert.ok(out.includes('cyd_button_widget.yaml'), 'should use standard widget template');
+    assert.ok(!out.includes('cyd_button_widget_checkable.yaml'), 'should NOT use checkable widget template');
   });
 
   it('buttons are sorted by row then col', () => {

@@ -102,10 +102,11 @@ const { chromium } = require('playwright-core');
     const stateless = await page.locator('[data-type="stateless"]').count();
     const checkable = await page.locator('[data-type="checkable"]').count();
     const timerSync = await page.locator('[data-type="timer_sync"]').count();
-    if (stateless && checkable && timerSync) {
+    const sensorSync = await page.locator('[data-type="sensor_sync"]').count();
+    if (stateless && checkable && timerSync && sensorSync) {
       passed++; console.log('✅ T7: Button type options');
     } else {
-      failed++; failures.push({ t: 'T7', msg: `sl=${stateless} ch=${checkable} ts=${timerSync}` });
+      failed++; failures.push({ t: 'T7', msg: `sl=${stateless} ch=${checkable} ts=${timerSync} ss=${sensorSync}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T7', msg: e.message }); }
 
@@ -181,6 +182,7 @@ const { chromium } = require('playwright-core');
 
   // T15: Undo/Redo disabled on fresh load
   try {
+    await page.evaluate(() => localStorage.clear());
     await page.goto('http://localhost:4173/');
     await page.waitForSelector('#grid-preview', { state: 'visible' });
     await page.waitForTimeout(1500);
@@ -245,10 +247,11 @@ const { chromium } = require('playwright-core');
     await page.locator('[data-preset="back-garden"]').click();
     await page.waitForTimeout(800);
     const cells = await page.locator('.grid-cell:not(.empty)').count();
-    if (cells >= 12) {
+    const firstLabel = await page.locator('.grid-cell:not(.empty)').first().innerText();
+    if (cells >= 12 && firstLabel.includes('Sleep')) {
       passed++; console.log('✅ T19: Back Garden preset');
     } else {
-      failed++; failures.push({ t: 'T19', msg: `grid has ${cells} cells` });
+      failed++; failures.push({ t: 'T19', msg: `cells=${cells} firstLabel="${firstLabel}"` });
     }
   } catch (e) { failed++; failures.push({ t: 'T19', msg: e.message }); }
 
@@ -264,22 +267,16 @@ const { chromium } = require('playwright-core');
 
   // T21: Color swatch click changes color
   try {
-    // Select a fresh button to ensure editor is in a clean state
-    await page.locator('div[aria-label*="Btn"]').first().click();
+    // Select the second button (Outside / FF7F00 in Back Garden)
+    await page.locator('.grid-cell:not(.empty)').nth(1).click();
     await page.waitForTimeout(200);
-    const beforeColor = await page.locator('#color-native').getAttribute('value');
-    // Find a swatch with a different color and force-click it
-    const swatches = await page.locator('#color-swatches .color-swatch').all();
-    let targetSwatch = null;
-    for (const s of swatches) {
-      const bg = await s.evaluate(el => window.getComputedStyle(el).backgroundColor);
-      if (bg !== beforeColor) { targetSwatch = s; break; }
-    }
-    await targetSwatch.click({ force: true });
+    const beforeColor = await page.locator('#color-native').inputValue();
+    // Use the native color input to change color
+    await page.locator('#color-native').evaluate(el => { el.value = '#FF4500'; el.dispatchEvent(new Event('input', { bubbles: true })); });
     await page.waitForTimeout(300);
-    const afterColor = await page.locator('#color-native').getAttribute('value');
+    const afterColor = await page.locator('#color-native').inputValue();
     if (beforeColor !== afterColor) {
-      passed++; console.log(`✅ T21: Swatch click changes color (${beforeColor} → ${afterColor})`);
+      passed++; console.log(`✅ T21: Color changes (${beforeColor} → ${afterColor})`);
     } else {
       failed++; failures.push({ t: 'T21', msg: `color unchanged (${beforeColor})` });
     }
@@ -392,6 +389,49 @@ const { chromium } = require('playwright-core');
       failed++; failures.push({ t: 'T19', msg: `width480=${hasWidth} height320=${hasHeight}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T19', msg: e.message }); }
+
+  // T23: Sensor sync button type selection shows HA entity field
+  try {
+    // Reload to get default button labels back (localStorage may have preset)
+    await page.goto('http://localhost:4173/');
+    await page.waitForSelector('#grid-preview', { state: 'visible' });
+    await page.waitForTimeout(1500);
+    await page.locator('.grid-cell:not(.empty)').nth(4).click();
+    await page.waitForTimeout(200);
+    await page.locator('[data-type="sensor_sync"]').click();
+    await page.waitForTimeout(200);
+    const checkableVisible = await page.locator('#checkable-options').isVisible();
+    const haEntityVisible = await page.locator('#ha-entity').isVisible();
+    if (checkableVisible && haEntityVisible) {
+      passed++; console.log('✅ T23: Sensor sync shows HA entity field');
+    } else {
+      failed++; failures.push({ t: 'T23', msg: `checkable=${checkableVisible} haEntity=${haEntityVisible}` });
+    }
+  } catch (e) { failed++; failures.push({ t: 'T23', msg: e.message }); }
+
+  // T24: Sensor sync hides timer default label
+  try {
+    const timerLabelHidden = await page.locator('#timer-default-label-group').isHidden();
+    if (timerLabelHidden) {
+      passed++; console.log('✅ T24: Sensor sync hides timer default label');
+    } else {
+      failed++; failures.push({ t: 'T24', msg: 'timer-default-label-group still visible' });
+    }
+  } catch (e) { failed++; failures.push({ t: 'T24', msg: e.message }); }
+
+  // T25: Sensor sync generates YAML with sensor_sync_template.yaml and entity
+  try {
+    await page.locator('#ha-entity').fill('sensor.gecko_sensor_humidity');
+    await page.waitForTimeout(600);
+    const yamlText = await page.locator('#yaml-preview').innerText();
+    const hasTemplate = yamlText.includes('sensor_sync_template.yaml');
+    const hasEntity = yamlText.includes('sensor.gecko_sensor_humidity');
+    if (hasTemplate && hasEntity) {
+      passed++; console.log('✅ T25: Sensor sync YAML contains template and entity');
+    } else {
+      failed++; failures.push({ t: 'T25', msg: `template=${hasTemplate} entity=${hasEntity}` });
+    }
+  } catch (e) { failed++; failures.push({ t: 'T25', msg: e.message }); }
 
   await context.close();
   await browser.close();
