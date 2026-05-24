@@ -302,7 +302,7 @@ const { chromium } = require('playwright-core');
     } else {
       failed++; failures.push({ t: 'T26', msg: `count=${count} tag=${tagName || 'missing'}` });
     }
-  } catch (e) { failed++; failures.push({ t: 'T13', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T26', msg: e.message }); }
 
   // T27: Default selected board is esp32-2432s028-2port
   try {
@@ -314,7 +314,7 @@ const { chromium } = require('playwright-core');
     } else {
       failed++; failures.push({ t: 'T27', msg: `expected esp32-2432s028-2port got ${value || 'missing'}` });
     }
-  } catch (e) { failed++; failures.push({ t: 'T14', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T27', msg: e.message }); }
 
   // T28: Board selector has 6 options
   try {
@@ -324,7 +324,7 @@ const { chromium } = require('playwright-core');
     } else {
       failed++; failures.push({ t: 'T28', msg: `expected 6 options got ${options}` });
     }
-  } catch (e) { failed++; failures.push({ t: 'T15', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T28', msg: e.message }); }
 
   // T29: Selecting Guition hides/disables RGB LED controls
   try {
@@ -339,7 +339,7 @@ const { chromium } = require('playwright-core');
     } else {
       failed++; failures.push({ t: 'T29', msg: '#rgb-led-controls still visible' });
     }
-  } catch (e) { failed++; failures.push({ t: 'T16', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T29', msg: e.message }); }
 
   // T30: Generated YAML reflects Guition
   try {
@@ -356,7 +356,7 @@ const { chromium } = require('playwright-core');
     } else {
       failed++; failures.push({ t: 'T30', msg: `dimensions=${hasDimensions} framework=${hasFramework}` });
     }
-  } catch (e) { failed++; failures.push({ t: 'T17', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T30', msg: e.message }); }
 
   // T31: Selecting back to default restores RGB controls
   try {
@@ -371,7 +371,7 @@ const { chromium } = require('playwright-core');
     } else {
       failed++; failures.push({ t: 'T31', msg: '#rgb-led-controls not visible after default board selected' });
     }
-  } catch (e) { failed++; failures.push({ t: 'T18', msg: e.message }); }
+  } catch (e) { failed++; failures.push({ t: 'T31', msg: e.message }); }
 
   // T32: Board switch updates YAML dimensions
   try {
