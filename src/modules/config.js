@@ -389,10 +389,20 @@ export const ACTION_SCHEMAS = {
   // Script is special - it uses the script ID as the action name directly
   script: {
     fields: [
-      { name: 'action', label: 'Script ID', type: 'text', placeholder: 'e.g. script.good_night' }
+      { name: 'action', label: 'Script ID', type: 'text', placeholder: 'e.g. script.good_night' },
+      { name: 'dataJson', label: 'Data (JSON)', type: 'text', placeholder: 'e.g. {"source": "PCme"}' }
     ],
     ha_action: (data) => data.action,
-    ha_data: () => ({})
+    ha_data: (data) => {
+      const result = {};
+      if (data.dataJson) {
+        try {
+          const parsed = JSON.parse(data.dataJson);
+          Object.assign(result, parsed);
+        } catch (e) { /* ignore invalid JSON */ }
+      }
+      return result;
+    }
   },
   // Custom action - free-form HA action for anything not covered
   custom: {
