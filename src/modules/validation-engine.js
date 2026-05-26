@@ -22,8 +22,8 @@ export function validateConfig(config, deps = {}) {
     return issues;
   }
 
-  if (!Array.isArray(config.buttons) || config.buttons.length !== 12) {
-    issues.errors.push({ message: 'Configuration must contain exactly 12 CYD buttons.' });
+  if (!Array.isArray(config.buttons) || config.buttons.length === 0) {
+    issues.errors.push({ message: 'Configuration must contain at least 1 CYD button.' });
     return issues;
   }
 
@@ -85,12 +85,10 @@ export function validateConfig(config, deps = {}) {
       return;
     }
 
+    if (btn.empty) return;
+
     if (!['stateless', 'checkable', 'timer_sync', 'sensor_sync'].includes(btn.type)) {
       issues.errors.push({ message: `Button ${i + 1} has an unsupported button type.`, selector: i === selectedButtonIndex ? '.type-toggle' : null });
-    }
-
-    if (!String(btn.label || '').trim()) {
-      issues.errors.push({ message: `Button ${i + 1} label is required.`, selector: i === selectedButtonIndex ? '#btn-label' : null });
     }
 
     if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.icon || ''))) {
@@ -115,7 +113,7 @@ export function validateConfig(config, deps = {}) {
     }
 
     if (btn.type === 'stateless' && !btn.shortPress?.enabled && !btn.longPress?.enabled) {
-      issues.errors.push({ message: `Button ${i + 1}: stateless buttons need at least one press action so the generated YAML has something to trigger.`, selector: i === selectedButtonIndex ? '#short-action-type' : null });
+      issues.warnings.push({ message: `Button ${i + 1}: stateless buttons need at least one press action so the generated YAML has something to trigger.`, selector: i === selectedButtonIndex ? '#short-action-type' : null });
     }
 
     // Both checkable, timer_sync and sensor_sync require HA entity

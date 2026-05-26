@@ -89,6 +89,7 @@ export function toYAML(obj, indent = 0) {
 export function extractGlyphs(buttons) {
   const glyphs = new Set();
   buttons.forEach(btn => {
+    if (btn.empty) return;
     if (btn.icon) glyphs.add(btn.icon);
     if (btn.iconOn) glyphs.add(btn.iconOn);
     if (btn.iconOff) glyphs.add(btn.iconOff);
@@ -407,7 +408,7 @@ export function generateFontSection(buttons, deps) {
     bpp: 2
     size: 12
     glyphs:
-      - "0123456789 /%':"
+      - "0123456789 /%':."
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -417,7 +418,7 @@ export function generateFontSection(buttons, deps) {
     size: 14
     bpp: 2
     glyphs:
-      - "0123456789 /%':"
+      - "0123456789 /%':."
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -428,7 +429,7 @@ export function generateFontSection(buttons, deps) {
     bpp: 2
     size: 16
     glyphs:
-      - "0123456789 /%':"
+      - "0123456789 /%':."
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file: \${font_directory}materialdesignicons-webfont.ttf
@@ -441,9 +442,10 @@ ${glyphList}`;
 export function generateColorSection(buttons, deps) {
   const { defaultButton, yamlQuoted, normalizeColor } = deps;
   const colors = buttons.map((btn, i) => {
+    if (btn.empty) return null;
     return `  - id: btn_${i + 1}_color
     hex: ${yamlQuoted(normalizeColor(btn.color) || defaultButton.color)}`;
-  }).join('\n');
+  }).filter(Boolean).join('\n');
 
   return `color:
   - id: room_bg_color
@@ -476,6 +478,7 @@ export function generateBinarySensors(buttons, deps) {
   const sensors = [];
 
   buttons.forEach((btn, i) => {
+    if (btn.empty) return;
     if (!btn.shortPress?.enabled && !btn.longPress?.enabled && btn.type !== 'checkable') return;
 
     const clicks = [];
@@ -538,6 +541,7 @@ export function generatePackages(buttons, deps) {
   const btnList = isArray ? buttons : (buttons?.buttons || []);
 
   btnList.forEach((btn, i) => {
+    if (btn.empty) return;
     if (!['checkable', 'timer_sync', 'sensor_sync'].includes(btn.type) || !String(btn.haEntity || '').trim()) return;
 
     const escapedState = String(btn.onState || 'on').replace(/"/g, '\\"');
@@ -644,7 +648,7 @@ export function generateLVGLWidgets(buttons, deps) {
   const gridRows = deps.config?.gridRows ?? 3;
 
   sorted.forEach(btn => {
-    if (btn.col >= gridColumns || btn.row >= gridRows) return;
+    if (btn.empty || btn.col >= gridColumns || btn.row >= gridRows) return;
     const isCheckable = btn.type === 'checkable';
     const hasTimerDefaultLabel = isCheckable && btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim();
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;

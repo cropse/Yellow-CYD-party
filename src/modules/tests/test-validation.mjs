@@ -115,25 +115,25 @@ describe('validateConfig - config-level validation', () => {
   test('config with empty buttons array returns error', () => {
     const result = validateConfig({ deviceName: 'test', niceName: 'Test', displayTimeout: 600, buttons: [] });
     assert.strictEqual(result.errors.length, 1);
-    assert.ok(result.errors[0].message.includes('must contain exactly 12'));
+    assert.ok(result.errors[0].message.includes('at least 1 CYD button'));
   });
 
-  test('config with 11 buttons returns error', () => {
+  test('config with 11 buttons (non-objects) returns errors for each invalid button', () => {
     const result = validateConfig({ deviceName: 'test', niceName: 'Test', displayTimeout: 600, buttons: [1,2,3,4,5,6,7,8,9,10,11] });
-    assert.strictEqual(result.errors.length, 1);
-    assert.ok(result.errors[0].message.includes('must contain exactly 12'));
+    assert.strictEqual(result.errors.length, 11);
+    assert.ok(result.errors[0].message.includes('empty or invalid'));
   });
 
-  test('config with 5 buttons returns error', () => {
+  test('config with 5 buttons (non-objects) returns errors for each invalid button', () => {
     const result = validateConfig({ deviceName: 'test', niceName: 'Test', displayTimeout: 600, buttons: [1,2,3,4,5] });
-    assert.strictEqual(result.errors.length, 1);
-    assert.ok(result.errors[0].message.includes('must contain exactly 12'));
+    assert.strictEqual(result.errors.length, 5);
+    assert.ok(result.errors[0].message.includes('empty or invalid'));
   });
 
   test('null buttons returns error', () => {
     const result = validateConfig({ deviceName: 'test', niceName: 'Test', displayTimeout: 600, buttons: null });
     assert.strictEqual(result.errors.length, 1);
-    assert.ok(result.errors[0].message.includes('must contain exactly 12'));
+    assert.ok(result.errors[0].message.includes('at least 1 CYD button'));
   });
 
   test('empty deviceName returns error', () => {
@@ -195,28 +195,14 @@ describe('validateConfig - button-level validation', () => {
     assert.strictEqual(typeErrors.length, 1);
   });
 
-  test('button with empty label returns error', () => {
+  test('button with empty/null/whitespace label passes validation (label is optional)', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].label = '';
-    const result = validateConfig(cfg);
-    const labelErrors = result.errors.filter(e => e.message.includes('label is required'));
-    assert.strictEqual(labelErrors.length, 1);
-  });
-
-  test('button with label as whitespace returns error', () => {
-    const cfg = makeValidConfig();
-    cfg.buttons[0].label = '   ';
-    const result = validateConfig(cfg);
-    const labelErrors = result.errors.filter(e => e.message.includes('label is required'));
-    assert.strictEqual(labelErrors.length, 1);
-  });
-
-  test('button with null label returns error', () => {
-    const cfg = makeValidConfig();
-    cfg.buttons[0].label = null;
-    const result = validateConfig(cfg);
-    const labelErrors = result.errors.filter(e => e.message.includes('label is required'));
-    assert.strictEqual(labelErrors.length, 1);
+    for (const label of ['', '   ', null, undefined]) {
+      cfg.buttons[0].label = label;
+      const result = validateConfig(cfg);
+      const labelErrors = result.errors.filter(e => e.message.includes('label'));
+      assert.strictEqual(labelErrors.length, 0, `Failed for label=${JSON.stringify(label)}`);
+    }
   });
 
   test('button with invalid icon (not U000Fxxxx) returns error', () => {
@@ -308,13 +294,13 @@ describe('validateConfig - button-level validation', () => {
     assert.strictEqual(colorErrors.length, 1);
   });
 
-  test('stateless button with no press actions returns error', () => {
+  test('stateless button with no press actions returns warning', () => {
     const cfg = makeValidConfig();
     cfg.buttons[0].shortPress = { enabled: false, actionType: '', action: '', data: {} };
     cfg.buttons[0].longPress = { enabled: false, actionType: '', action: '', data: {} };
     const result = validateConfig(cfg);
-    const actionErrors = result.errors.filter(e => e.message.includes('stateless buttons need at least one press action'));
-    assert.strictEqual(actionErrors.length, 1);
+    const actionWarnings = result.warnings.filter(w => w.message.includes('stateless buttons need at least one press action'));
+    assert.strictEqual(actionWarnings.length, 1);
   });
 
   test('checkable button with no haEntity returns error', () => {
