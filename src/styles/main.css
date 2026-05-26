@@ -173,7 +173,7 @@ main {
   }
 
   .editor-section {
-    grid-row: 1;
+    grid-row: 1 / 3;
   }
 
   .output-section,
@@ -324,7 +324,7 @@ h2 {
   padding: 4px;
 }
 
-.grid-cell:not(.empty) {
+.grid-cell {
   cursor: pointer;
 }
 
@@ -369,7 +369,7 @@ h2 {
   opacity: 1;
 }
 
-.grid-cell:active:not(.empty) {
+.grid-cell:active {
   transform: scale(0.95);
   transition-duration: 0.1s;
 }

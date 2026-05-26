@@ -22,6 +22,9 @@ export function createStore(options) {
   // Debounce YAML generation & validation - these are expensive and run on every keystroke.
   const scheduleExpensive = debounce(() => { generate(); validate(); }, 400);
 
+  // Debounce render to avoid re-rendering the entire editor panel on every keystroke.
+  const scheduleRender = debounce(() => { render(); }, 50);
+
   let effectsScheduled = false;
   function scheduleEffects() {
     if (effectsScheduled) return;
@@ -29,7 +32,7 @@ export function createStore(options) {
     queueMicrotask(() => {
       effectsScheduled = false;
       save();
-      render();
+      scheduleRender();
     });
     scheduleExpensive();
   }
@@ -51,6 +54,7 @@ export function createStore(options) {
       ));
     }
     scheduleExpensive.cancel();
+    scheduleRender.cancel();
     save();
     render();
     generate();

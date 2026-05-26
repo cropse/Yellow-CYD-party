@@ -324,6 +324,7 @@ function renderGridPreview() {
 
   const positionMap = new Map();
   appState.buttons.forEach((btn, idx) => {
+    if (btn.empty) return;
     const key = `${btn.col},${btn.row}`;
     if (!positionMap.has(key)) positionMap.set(key, []);
     positionMap.get(key).push(idx);
@@ -378,7 +379,10 @@ function renderGridPreview() {
       `;
       cell.classList.add('empty');
       applyGridDragAttributes(cell, btnIndex);
-      cell.tabIndex = -1;
+      cell.tabIndex = 0;
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('aria-label', `Move selected button to column ${col + 1}, row ${row + 1}`);
+      cell.addEventListener('click', () => handleEmptyCellClick(col, row));
       cell.addEventListener('keydown', (e) => handleGridKeydown(e, col, row, btnIndex));
       attachGridDragListeners(cell, btnIndex);
     }
@@ -389,7 +393,7 @@ function renderGridPreview() {
   for (let row = 0; row < gridRows; row++) {
     for (let col = 0; col < gridColumns; col++) {
       const slotIndex = row * gridColumns + col;
-      const btnIndex = appState.buttons.findIndex(b => b.col === col && b.row === row);
+      const btnIndex = appState.buttons.findIndex(b => !b.empty && b.col === col && b.row === row);
       const hasConflict = positionMap.get(`${col},${row}`)?.length > 1;
 
       let cell = container.children[slotIndex];
@@ -436,6 +440,41 @@ function renderGridPreview() {
       }
     }
   }
+}
+
+function findEmptyPosition() {
+  const gridColumns = appState.gridColumns || DEFAULT_CONFIG.gridColumns;
+  const gridRows = appState.gridRows || DEFAULT_CONFIG.gridRows;
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridColumns; col++) {
+      const occupied = appState.buttons.some(b => !b.empty && b.col === col && b.row === row);
+      if (!occupied) return { col, row };
+    }
+  }
+  return null;
+}
+
+function handleEmptyCellClick(col, row) {
+  const occupied = appState.buttons.some(b => !b.empty && b.col === col && b.row === row);
+  const target = occupied ? findEmptyPosition() : { col, row };
+  if (!target) {
+    showToast('Grid is full — remove a button first', 'error');
+    return;
+  }
+
+  store.update('Add new button', state => {
+    const newBtn = structuredClone(DEFAULT_BUTTON);
+    newBtn.id = `btn_${Date.now()}`;
+    newBtn.name = `Button ${state.buttons.length + 1}`;
+    newBtn.label = `Btn ${state.buttons.length + 1}`;
+    newBtn.col = target.col;
+    newBtn.row = target.row;
+    state.buttons.push(newBtn);
+  });
+  selectedButtonIndex = appState.buttons.length - 1;
+  window.selectedButtonIndex = selectedButtonIndex;
+  renderGridPreview();
+  renderEditorPanel();
 }
 
 function handleGridKeydown(e, col, row, btnIndex) {
@@ -557,6 +596,12 @@ function renderEditorPanel() {
 function renderActionFields(containerId, actionType, data, isLong) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  const activeEl = document.activeElement;
+  const wasFocused = activeEl && container.contains(activeEl);
+  const focusedFieldName = wasFocused ? activeEl.id.replace(`${containerId}-`, '') : null;
+  const cursorPos = wasFocused ? (activeEl.selectionStart ?? null) : null;
+
   container.innerHTML = '';
 
   const schema = ACTION_SCHEMAS[actionType];
@@ -613,6 +658,16 @@ function renderActionFields(containerId, actionType, data, isLong) {
     group.appendChild(input);
     container.appendChild(group);
   });
+
+  if (focusedFieldName) {
+    const el = document.getElementById(`${containerId}-${focusedFieldName}`);
+    if (el) {
+      el.focus();
+      if (cursorPos !== null && el.setSelectionRange) {
+        el.setSelectionRange(cursorPos, cursorPos);
+      }
+    }
+  }
 }
 
 function renderColorThemePresets() {
@@ -790,7 +845,8 @@ function generateYAML() {
   const result = ValidationEngine.validateConfig(appState, { selectedButtonIndex, ACTION_SCHEMAS });
 
   if (result.errors.length > 0) {
-    preview.textContent = `# YAML generation blocked by ${result.errors.length} critical validation error${result.errors.length === 1 ? '' : 's'}.`;
+    const errorList = result.errors.map(e => `# - ${e.message}`).join('\n');
+    preview.textContent = `# YAML generation blocked by ${result.errors.length} critical validation error${result.errors.length === 1 ? '' : 's'}:\n${errorList}`;
     return '';
   }
 
@@ -829,6 +885,21 @@ function generateYAML() {
 
 function selectButton(index) {
   const clamped = Math.max(0, Math.min(index, appState.buttons.length - 1));
+  const btn = appState.buttons[clamped];
+  
+  if (btn?.empty) {
+    store.update('Initialize empty button', state => {
+      const b = state.buttons[clamped];
+      Object.assign(b, structuredClone(DEFAULT_BUTTON));
+      b.id = btn.id;
+      b.name = btn.name;
+      b.col = btn.col;
+      b.row = btn.row;
+      b.label = `Btn ${clamped + 1}`;
+      delete b.empty;
+    });
+  }
+  
   selectedButtonIndex = clamped;
   window.selectedButtonIndex = clamped;
   renderGridPreview();
@@ -993,11 +1064,25 @@ function setupGlobalSettings() {
       const grid = getNormalizedGridForBoard(boardConfig, state.gridColumns || DEFAULT_CONFIG.gridColumns, state.gridRows || DEFAULT_CONFIG.gridRows);
       state.gridColumns = grid.columns;
       state.gridRows = grid.rows;
-      // Clamp button positions to new grid bounds
       state.buttons.forEach(btn => {
         btn.col = Math.max(0, Math.min(state.gridColumns - 1, btn.col));
         btn.row = Math.max(0, Math.min(state.gridRows - 1, btn.row));
       });
+      const occupied = new Map();
+      const removed = [];
+      state.buttons.forEach((btn, i) => {
+        if (btn.empty) return;
+        const pos = `${btn.col},${btn.row}`;
+        if (occupied.has(pos)) {
+          removed.push(i + 1);
+          btn.empty = true;
+        } else {
+          occupied.set(pos, i);
+        }
+      });
+      if (removed.length > 0) {
+        showToast(`Removed overlapping buttons: ${removed.map(n => `#${n}`).join(', ')}. Assign them to free slots to restore.`, 'warning', 6000);
+      }
     });
   });
 
@@ -1016,6 +1101,21 @@ function setupGlobalSettings() {
         btn.col = Math.max(0, Math.min(columns - 1, btn.col));
         btn.row = Math.max(0, Math.min(rows - 1, btn.row));
       });
+      const occupied = new Map();
+      const removed = [];
+      state.buttons.forEach((btn, i) => {
+        if (btn.empty) return;
+        const pos = `${btn.col},${btn.row}`;
+        if (occupied.has(pos)) {
+          removed.push(i + 1);
+          btn.empty = true;
+        } else {
+          occupied.set(pos, i);
+        }
+      });
+      if (removed.length > 0) {
+        showToast(`Removed overlapping buttons: ${removed.map(n => `#${n}`).join(', ')}. Assign them to free slots to restore.`, 'warning', 6000);
+      }
     });
   });
 
@@ -1495,11 +1595,17 @@ function pasteToSelectedButton() {
 }
 
 function resetSelectedButton() {
+  const btn = appState.buttons[selectedButtonIndex];
   store.update('Reset button', state => {
-    const fallback = DEFAULT_CONFIG.buttons[selectedButtonIndex];
-    state.buttons[selectedButtonIndex] = structuredClone(fallback);
+    state.buttons[selectedButtonIndex] = {
+      id: btn.id,
+      name: btn.name,
+      col: btn.col,
+      row: btn.row,
+      empty: true
+    };
   });
-  showToast('Button reset to default', 'success');
+  showToast('Button slot cleared', 'success');
 }
 
 function exportConfig() {
