@@ -8,25 +8,22 @@ import { DEFAULT_CONFIG } from '../config.js';
 
 // ── normalizeImportedConfig ──────────────────────────────────────────────
 describe('normalizeImportedConfig - config-level', () => {
-  it('returns 12 buttons from empty config', () => {
+  it('returns 1 button from empty config', () => {
     const { config, warnings } = normalizeImportedConfig({});
-    assert.strictEqual(config.buttons.length, 12);
+    assert.strictEqual(config.buttons.length, 1);
     assert.strictEqual(config.deviceName, DEFAULT_CONFIG.deviceName);
   });
 
-  it('fills missing buttons up to 12', () => {
+  it('preserves button count from imported config', () => {
     const btn = { type: 'stateless', col: 0, row: 0, shortPress: { enabled: false }, longPress: { enabled: false } };
-    const { config, warnings } = normalizeImportedConfig({ buttons: [btn] });
-    assert.strictEqual(config.buttons.length, 12);
-    // Multiple warnings: 1 count warning + 11 missing-btn + 12 position warnings
-    assert.ok(warnings.length > 1);
-    assert.ok(warnings.some(w => w.includes('1 button')));
+    const { config } = normalizeImportedConfig({ buttons: [btn] });
+    assert.strictEqual(config.buttons.length, 1);
   });
 
-  it('warns when more than 12 buttons', () => {
+  it('preserves more than 12 buttons when imported', () => {
     const btn = { type: 'stateless', col: 0, row: 0, shortPress: { enabled: false }, longPress: { enabled: false } };
-    const { warnings } = normalizeImportedConfig({ buttons: Array(15).fill(btn).map((b, i) => ({ ...b, id: `btn_${i}` })) });
-    assert.ok(warnings.some(w => w.includes('15 buttons')));
+    const { config } = normalizeImportedConfig({ buttons: Array(15).fill(btn).map((b, i) => ({ ...b, id: `btn_${i}` })) });
+    assert.strictEqual(config.buttons.length, 15);
   });
 
   it('clamps displayTimeout to 90-3600', () => {
@@ -46,7 +43,7 @@ describe('normalizeImportedConfig - config-level', () => {
 
   it('handles null/undefined input', () => {
     const { config } = normalizeImportedConfig(null);
-    assert.strictEqual(config.buttons.length, 12);
+    assert.strictEqual(config.buttons.length, 1);
   });
 
   it('normalizes deviceName via sanitizeDeviceName', () => {

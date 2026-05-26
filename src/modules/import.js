@@ -38,7 +38,7 @@ export function normalizeImportedConfig(rawConfig) {
   const warnings = [];
   const source = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
   const buttons = Array.isArray(source.buttons) ? source.buttons : [];
-  if (buttons.length !== 12) warnings.push(`Imported config had ${buttons.length || 0} buttons; normalized to 12 CYD buttons.`);
+  if (buttons.length === 0) warnings.push('Imported config had no buttons; using defaults.');
 
   const board = resolveBoard(source.board);
   const boardConfig = getBoardConfig(board);
@@ -53,6 +53,7 @@ const rotate180 = source.rotate180 !== undefined ? Boolean(source.rotate180) : B
     warnings.push(`Grid size was normalized to ${grid.gridColumns}x${grid.gridRows} for the selected board.`);
   }
 
+  const buttonCount = Math.max(1, buttons.length);
   const config = {
     deviceName: sanitizeDeviceName(source.deviceName || DEFAULT_CONFIG.deviceName) || DEFAULT_CONFIG.deviceName,
     niceName: String(source.niceName || DEFAULT_CONFIG.niceName).trim() || DEFAULT_CONFIG.niceName,
@@ -63,7 +64,7 @@ const rotate180 = source.rotate180 !== undefined ? Boolean(source.rotate180) : B
     rotate180,
     iconSize: clampNumber(source.iconSize, 16, 96, DEFAULT_CONFIG.iconSize),
     led: normalizeLedConfig(source.led),
-    buttons: Array(12).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings, grid.gridColumns - 1, grid.gridRows - 1))
+    buttons: Array(buttonCount).fill(null).map((_, index) => normalizeButton(buttons[index], index, warnings, grid.gridColumns - 1, grid.gridRows - 1))
   };
 
   ensureUniquePositions(config.buttons, warnings);
