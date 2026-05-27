@@ -131,6 +131,10 @@ export function createStore(options) {
         undoStack: undoStack.length,
         redoStack: redoStack.length
       };
+    },
+
+    getSelectedIndex() {
+      return getSelectedIndex();
     }
   };
 }

@@ -408,7 +408,7 @@ export function generateFontSection(buttons, deps) {
     bpp: 2
     size: 12
     glyphs:
-      - "0123456789 /%':."
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -418,7 +418,7 @@ export function generateFontSection(buttons, deps) {
     size: 14
     bpp: 2
     glyphs:
-      - "0123456789 /%':."
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file:
@@ -429,7 +429,7 @@ export function generateFontSection(buttons, deps) {
     bpp: 2
     size: 16
     glyphs:
-      - "0123456789 /%':."
+      - "0123456789 /%':"
       - "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
       - "abcdefghijklmnopqrstuvwxyz"
   - file: \${font_directory}materialdesignicons-webfont.ttf
