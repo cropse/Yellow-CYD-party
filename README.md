@@ -24,7 +24,7 @@ A web-based tool for generating ESPHome YAML configurations for CYD (Cheap Yello
   - Media player control
   - Automation triggers
 - **Presets**: Pre-configured templates (Living Room, Bedroom)
-- **Import/Export**: Save and load configurations as JSON
+- **YAML Import/Export**: Save, edit, and reload ESPHome YAML configurations
 - **YAML Output**: Copy or download generated configuration
 - **Dark/Light Theme**: Toggle between themes
 - **Offline Support**: Works offline after initial load (icon search requires internet)
@@ -91,7 +91,7 @@ A button that syncs its state with a Home Assistant entity:
 
 ### Keyboard Shortcuts
 
-- `Ctrl+S`: Export configuration as JSON
+- `Ctrl+S`: Download YAML file
 - `Ctrl+D`: Download YAML file
 - `Esc`: Close icon picker modal
 

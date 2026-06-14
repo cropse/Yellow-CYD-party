@@ -37,6 +37,8 @@ const mockWin = {};
 const sharedCtx = {
   console,
   structuredClone,
+  btoa: (str) => Buffer.from(str, 'utf8').toString('base64'),
+  atob: (b64) => Buffer.from(b64, 'base64').toString('utf8'),
   localStorage: { getItem(){ return null; }, setItem(){}, removeItem(){} },
   sessionStorage: {
     getItem(k){ return sessionStore[k] ?? null; },
@@ -246,11 +248,27 @@ if (!yaml.includes('!secret api_encryption_key') || !yaml.includes('!secret wifi
 }
 
 // Test parity: generated YAML must match back-garden-cyd.yaml reference
+// Strip embedded metadata comments before comparison (metadata is for round-trip import, not ESPHome behavior)
+const stripMetadata = (text) => {
+  const lines = text.split('\n');
+  let inMeta = false;
+  let inCustom = false;
+  return lines.filter(l => {
+    if (l === '# cyd-config: begin') { inMeta = true; return false; }
+    if (l === '# cyd-config: end') { inMeta = false; return false; }
+    if (inMeta) return false;
+    if (l === '# cyd-custom: begin') { inCustom = true; return false; }
+    if (l === '# cyd-custom: end') { inCustom = false; return false; }
+    if (inCustom) return false;
+    return true;
+  }).join('\n').replace(/\n{2,}$/, '\n');
+};
 const refPath = path.join(__dirname, 'back-garden-cyd.yaml');
 const refYaml = fs.readFileSync(refPath, 'utf8');
-if (yaml !== refYaml) {
+const yamlStripped = stripMetadata(yaml);
+if (yamlStripped !== refYaml) {
   const refLines = refYaml.split('\n');
-  const genLines = yaml.split('\n');
+  const genLines = yamlStripped.split('\n');
   for (let i = 0; i < Math.max(refLines.length, genLines.length); i++) {
     if (refLines[i] !== genLines[i]) {
       throw new Error(`YAML parity mismatch at line ${i + 1}: ref="${refLines[i]}" gen="${genLines[i]}"`);
