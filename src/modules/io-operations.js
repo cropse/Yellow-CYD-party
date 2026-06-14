@@ -2,38 +2,16 @@
 // I/O OPERATIONS MODULE
 // ============================================================
 
-/**
- * Factory for import/export/download operations.
- * @param {Function} getState - Getter returning current appState
- * @param {object} store - Store with .update() method
- * @param {Function} generateYAML - YAML generation function
- * @param {Function} showToast - Toast notification function
- * @param {Function} normalizeImportedConfig - Config normalization from import.js
- * @param {string} defaultBoardId - DEFAULT_BOARD_ID constant
- */
-export function createIOOperations(getState, store, generateYAML, showToast, normalizeImportedConfig, defaultBoardId) {
-  function exportConfig() {
-    const state = getState();
-    const json = JSON.stringify(state, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${state.deviceName || 'cyd'}-config.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Configuration exported', 'success');
-  }
-
+export function createIOOperations(getState, store, generateYAML, showToast, importFromYAML) {
   function importConfig(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
+      const text = e.target.result;
       try {
-        const raw = JSON.parse(e.target.result);
-        const { config, warnings } = normalizeImportedConfig(raw);
+        const { config, warnings } = importFromYAML(text);
         store.update('Import config', state => {
           Object.assign(state, config);
-          state.board = config.board || defaultBoardId;
+          state.board = config.board || 'esp32-2432s028-2port';
         }, { skipUndo: true });
         if (warnings.length) {
           console.log('Import warnings:', warnings);
@@ -42,7 +20,7 @@ export function createIOOperations(getState, store, generateYAML, showToast, nor
           showToast('Configuration imported', 'success');
         }
       } catch (err) {
-        showToast('Import failed: invalid JSON', 'error');
+        showToast('Import failed: ' + err.message, 'error');
         console.error('Import error:', err);
       }
     };
@@ -79,15 +57,5 @@ export function createIOOperations(getState, store, generateYAML, showToast, nor
     });
   }
 
-  function copyConfigToClipboard() {
-    const state = getState();
-    const json = JSON.stringify(state, null, 2);
-    navigator.clipboard.writeText(json).then(() => {
-      showToast('Config copied to clipboard', 'success');
-    }).catch(() => {
-      showToast('Failed to copy config', 'error');
-    });
-  }
-
-  return { exportConfig, importConfig, downloadYAML, copyYAMLToClipboard, copyConfigToClipboard };
+  return { importConfig, downloadYAML, copyYAMLToClipboard };
 }

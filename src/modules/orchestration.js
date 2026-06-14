@@ -6,7 +6,7 @@ import { createStore } from './store.js';
 import * as YamlGenerationEngine from './yaml-engine.js';
 import * as ValidationEngine from './validation-engine.js';
 import { normalizeColor, clampNumber, yamlDoc, yamlInclude, yamlRaw, yamlSecret } from './utils.js';
-import { normalizeImportedConfig } from './import.js';
+import { normalizeImportedConfig, importFromYAML } from './import.js';
 import { loadMDIData, getMdiData, getIconByCodepoint, searchIcons, searchIconsByCategory, getRecentIcons, addRecentIcon, getFavorites, toggleFavorite } from './mdi.js';
 
 import { createStateAccessors, getPreviewFontSize } from './state-accessors.js';
@@ -228,8 +228,7 @@ function generateYAML() {
 }
 
 const io = createIOOperations(
-  () => appState, store, generateYAML, showToast,
-  normalizeImportedConfig, DEFAULT_BOARD_ID
+  () => appState, store, generateYAML, showToast, importFromYAML
 );
 
 // ── Modal management ──────────────────────────────────────────────────
@@ -344,10 +343,8 @@ function setupHeaderActions() {
     });
   }
 
-  document.getElementById('export-btn')?.addEventListener('click', () => withLoading('export-btn', io.exportConfig));
+  document.getElementById('export-btn')?.addEventListener('click', () => withLoading('export-btn', io.downloadYAML));
   document.getElementById('copy-yaml-header-btn')?.addEventListener('click', () => withLoading('copy-yaml-header-btn', io.copyYAMLToClipboard));
-  document.getElementById('validate-btn')?.addEventListener('click', () => withLoading('validate-btn', () => runValidation({ showSummary: true })));
-  document.getElementById('download-yaml-btn')?.addEventListener('click', () => withLoading('download-yaml-btn', io.downloadYAML));
   document.getElementById('copy-yaml-btn')?.addEventListener('click', () => withLoading('copy-yaml-btn', io.copyYAMLToClipboard));
 }
 
@@ -636,7 +633,7 @@ function setupKeyboardShortcuts() {
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
-      io.exportConfig();
+      io.downloadYAML();
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
       e.preventDefault();
