@@ -45,12 +45,10 @@ const { chromium } = require('playwright-core');
     const importBtn = await c('import-btn-label');
     const exportBtn = await c('export-btn');
     const yamlCopy = await c('copy-yaml-header-btn');
-    const validate = await c('validate-btn');
-    const download = await c('download-yaml-btn');
-    if (importBtn && exportBtn && yamlCopy && validate && download) {
+    if (importBtn && exportBtn && yamlCopy) {
       passed++; console.log('✅ T3: Toolbar buttons');
     } else {
-      failed++; failures.push({ t: 'T3', msg: `imp=${importBtn} exp=${exportBtn} cp=${yamlCopy} val=${validate} dl=${download}` });
+      failed++; failures.push({ t: 'T3', msg: `imp=${importBtn} exp=${exportBtn} cp=${yamlCopy}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T3', msg: e.message }); }
 
@@ -152,15 +150,7 @@ const { chromium } = require('playwright-core');
     }
   } catch (e) { failed++; failures.push({ t: 'T11', msg: e.message }); }
 
-  // T12: Validation button
-  try {
-    await page.locator('#validate-btn').click();
-    await page.waitForTimeout(500);
-    const modalVisible = await page.locator('#validation-modal').isVisible();
-    passed++; console.log(`✅ T12: Validate button works (modal: ${modalVisible})`);
-  } catch (e) { failed++; failures.push({ t: 'T12', msg: e.message }); }
-
-  // T13: Copy YAML button enabled
+  // T12: Copy YAML button enabled
   try {
     const enabled = await page.locator('#copy-yaml-header-btn').isEnabled();
     if (enabled) {
@@ -170,13 +160,13 @@ const { chromium } = require('playwright-core');
     }
   } catch (e) { failed++; failures.push({ t: 'T13', msg: e.message }); }
 
-  // T14: Download YAML button enabled
+  // T14: Export button enabled
   try {
-    const enabled = await page.locator('#download-yaml-btn').isEnabled();
+    const enabled = await page.locator('#export-btn').isEnabled();
     if (enabled) {
-      passed++; console.log('✅ T14: Download YAML enabled');
+      passed++; console.log('✅ T14: Export button enabled');
     } else {
-      failed++; failures.push({ t: 'T14', msg: 'download disabled' });
+      failed++; failures.push({ t: 'T14', msg: 'export disabled' });
     }
   } catch (e) { failed++; failures.push({ t: 'T14', msg: e.message }); }
 

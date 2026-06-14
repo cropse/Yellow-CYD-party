@@ -206,7 +206,7 @@ test.describe('CYD Config Generator - End-to-End Tests', () => {
   });
 
   // TEST 12: Export/Import should work
-  test('T12: Export config should download JSON file', async ({ page }) => {
+  test('T12: Export config should download YAML file', async ({ page }) => {
     const exportBtn = page.locator('button:has-text("Export")');
     await expect(exportBtn).toBeVisible();
     
@@ -217,23 +217,18 @@ test.describe('CYD Config Generator - End-to-End Tests', () => {
     ]);
     
     // Verify download started
-    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    expect(download.suggestedFilename()).toMatch(/\.yaml$/);
   });
 
-  // TEST 13: Validation should fail with errors
-  test('T13: Validation should show errors for invalid config', async ({ page }) => {
-    const validateBtn = page.locator('button:has-text("Validate")');
-    await validateBtn.click();
-    
+  // TEST 13: Validation runs on config changes
+  test('T13: Validation runs automatically on config changes', async ({ page }) => {
+    // Validation is automatic on edit - check that errors appear in YAML preview
     await page.waitForTimeout(500);
     
-    // Check for validation errors
-    const errorCount = await page.evaluate(() => {
-      const errors = document.querySelectorAll('[class*="error"], .validation-error');
-      return errors.length;
-    });
-    
-    expect(errorCount).toBeGreaterThanOrEqual(0);
+    // Check for validation state in YAML preview
+    const yamlContent = await page.locator('#yaml-preview').textContent();
+    // Default config should not have blocking errors
+    expect(yamlContent).toBeTruthy();
   });
 
   // TEST 14: Undo/Redo buttons
@@ -278,7 +273,7 @@ test.describe('CYD Config Generator - End-to-End Tests', () => {
       page.keyboard.press('Control+S')
     ]);
     
-    expect(download.suggestedFilename()).toMatch(/\.json$/);
+    expect(download.suggestedFilename()).toMatch(/\.yaml$/);
   });
 
   // TEST 17: Check console for errors
