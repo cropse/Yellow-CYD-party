@@ -6,7 +6,7 @@ import {
 import * as YamlGenerationEngine from './modules/yaml-engine.js';
 import * as ValidationEngine from './modules/validation-engine.js';
 import { normalizeColor, clampNumber, yamlDoc, yamlInclude, yamlRaw, yamlSecret } from './modules/utils.js';
-import { normalizeImportedConfig } from './modules/import.js';
+import { normalizeImportedConfig, importFromYAML } from './modules/import.js';
 import { getBoardConfig } from './modules/config.js';
 import {
   init, store, generateYAML, selectButton, getAppState, setAppState, setSelectedButtonIndex
@@ -52,5 +52,6 @@ window.validateConfig = (config) => ValidationEngine.validateConfig(config, {
   selectedButtonIndex: store.getSelectedIndex(),
   ACTION_SCHEMAS
 });
+window.importFromYAML = importFromYAML;
 
 init();

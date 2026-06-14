@@ -369,12 +369,13 @@ export const DEFAULT_CONFIG = {
   niceName: 'My CYD',
   board: DEFAULT_BOARD_ID,
   displayTimeout: 600,
-  apPassword: null, // Generated randomly on first YAML generation
+  apPassword: null,
   gridColumns: 4,
   gridRows: 3,
   iconSize: 48,
   rotate180: false,
   led: structuredClone(DEFAULT_LED),
+  rawBlocks: [],
   buttons: Array(12).fill(null).map((_, i) => ({
     ...structuredClone(DEFAULT_BUTTON),
     id: `btn_${i + 1}`,
