@@ -712,9 +712,10 @@ async function init() {
 function getAppState() { return appState; }
 function setAppState(val) { appState = val; }
 
+// ponytail: window.selectedButtonIndex is a setter (main.js) that calls this —
+// writing window.selectedButtonIndex here would recurse. Setter already wrote it.
 function setSelectedButtonIndex(val) {
   selectedButtonIndex = val;
-  window.selectedButtonIndex = val;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────

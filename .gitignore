@@ -2,3 +2,6 @@ esphome/
 node_modules/
 dist/
 .sisyphus/
+.playwright-mcp/
+.archon/
+.omo/
