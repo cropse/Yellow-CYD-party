@@ -394,12 +394,13 @@ describe('validateConfig - button-level validation', () => {
     assert.strictEqual(thresholdErrors.length, 1);
   });
 
-  test('number_sync button without icons returns error', () => {
+  test('number_sync button without icons falls back to main icon, errors if main icon also missing', () => {
     const cfg = makeValidConfig();
     cfg.buttons[0].type = 'number_sync';
     cfg.buttons[0].haEntity = 'sensor.temperature';
     cfg.buttons[0].threshold = 50;
     cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].icon = '';
     cfg.buttons[0].iconOn = '';
     cfg.buttons[0].iconOff = '';
     const result = validateConfig(cfg);

@@ -135,7 +135,7 @@ export function validateConfig(config, deps = {}) {
       if (!['above', 'below'].includes(btn.condition)) {
         issues.errors.push({ message: `Button ${i + 1} number_sync condition must be 'above' or 'below'.`, selector: i === selectedButtonIndex ? '#number-sync-condition-group' : null });
       }
-      if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOn || '')) || !/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOff || ''))) {
+      if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOn || btn.icon || '')) || !/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOff || btn.icon || ''))) {
         issues.errors.push({ message: `Button ${i + 1} number_sync mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
       }
     }
