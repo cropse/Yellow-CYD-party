@@ -100,11 +100,11 @@ const { chromium } = require('playwright-core');
     const stateless = await page.locator('[data-type="stateless"]').count();
     const checkable = await page.locator('[data-type="checkable"]').count();
     const timerSync = await page.locator('[data-type="timer_sync"]').count();
-    const sensorSync = await page.locator('[data-type="sensor_sync"]').count();
+    const numberSync = await page.locator('[data-type="number_sync"]').count();
     if (stateless && checkable && timerSync && sensorSync) {
       passed++; console.log('✅ T7: Button type options');
     } else {
-      failed++; failures.push({ t: 'T7', msg: `sl=${stateless} ch=${checkable} ts=${timerSync} ss=${sensorSync}` });
+      failed++; failures.push({ t: 'T7', msg: `sl=${stateless} ch=${checkable} ts=${timerSync} ns=${numberSync}` });
     }
   } catch (e) { failed++; failures.push({ t: 'T7', msg: e.message }); }
 
@@ -388,7 +388,7 @@ const { chromium } = require('playwright-core');
     await page.waitForTimeout(1500);
     await page.locator('.grid-cell:not(.empty)').nth(4).click();
     await page.waitForTimeout(200);
-    await page.locator('[data-type="sensor_sync"]').click();
+    await page.locator('[data-type="number_sync"]').click();
     await page.waitForTimeout(200);
     const checkableVisible = await page.locator('#checkable-options').isVisible();
     const haEntityVisible = await page.locator('#ha-entity').isVisible();
@@ -409,12 +409,12 @@ const { chromium } = require('playwright-core');
     }
   } catch (e) { failed++; failures.push({ t: 'T24', msg: e.message }); }
 
-  // T25: Sensor sync generates YAML with sensor_sync_template.yaml and entity
+  // T25: Sensor sync generates YAML with number_sync_template.yaml and entity
   try {
     await page.locator('#ha-entity').fill('sensor.gecko_sensor_humidity');
     await page.waitForTimeout(600);
     const yamlText = await page.locator('#yaml-preview').innerText();
-    const hasTemplate = yamlText.includes('sensor_sync_template.yaml');
+    const hasTemplate = yamlText.includes('number_sync_template.yaml');
     const hasEntity = yamlText.includes('sensor.gecko_sensor_humidity');
     if (hasTemplate && hasEntity) {
       passed++; console.log('✅ T25: Sensor sync YAML contains template and entity');

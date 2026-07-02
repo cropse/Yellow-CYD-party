@@ -87,7 +87,7 @@ export function validateConfig(config, deps = {}) {
 
     if (btn.empty) return;
 
-    if (!['stateless', 'checkable', 'timer_sync', 'sensor_sync'].includes(btn.type)) {
+    if (!['stateless', 'checkable', 'timer_sync', 'number_sync'].includes(btn.type)) {
       issues.errors.push({ message: `Button ${i + 1} has an unsupported button type.`, selector: i === selectedButtonIndex ? '.type-toggle' : null });
     }
 
@@ -116,15 +116,28 @@ export function validateConfig(config, deps = {}) {
       issues.warnings.push({ message: `Button ${i + 1}: stateless buttons need at least one press action so the generated YAML has something to trigger.`, selector: i === selectedButtonIndex ? '#short-action-type' : null });
     }
 
-    // Both checkable, timer_sync and sensor_sync require HA entity
-    const needsEntitySync = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'sensor_sync';
+    // Both checkable, timer_sync and number_sync require HA entity
+    const needsEntitySync = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'number_sync';
     if (needsEntitySync && !String(btn.haEntity || '').trim()) {
       issues.errors.push({ message: `Button ${i + 1}: ${btn.type} mode needs a Home Assistant entity such as switch.living_room or timer.studio_light.`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
     }
 
-    // sensor_sync must use a sensor.* domain entity
-    if (btn.type === 'sensor_sync' && String(btn.haEntity || '').trim() && !/^sensor\./.test(String(btn.haEntity))) {
-      issues.errors.push({ message: `Button ${i + 1}: sensor_sync mode requires a sensor.* entity like sensor.temperature; got "${btn.haEntity}".`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
+    // number_sync must use a sensor.* domain entity
+    if (btn.type === 'number_sync' && String(btn.haEntity || '').trim() && !/^sensor\./.test(String(btn.haEntity))) {
+      issues.errors.push({ message: `Button ${i + 1}: number_sync mode requires a sensor.* entity like sensor.temperature; got "${btn.haEntity}".`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
+    }
+
+    // number_sync requires threshold and valid on/off icons
+    if (btn.type === 'number_sync') {
+      if (btn.threshold === null || btn.threshold === '' || isNaN(Number(btn.threshold))) {
+        issues.errors.push({ message: `Button ${i + 1} number_sync mode requires a numeric threshold.`, selector: i === selectedButtonIndex ? '#number-threshold' : null });
+      }
+      if (!['above', 'below'].includes(btn.condition)) {
+        issues.errors.push({ message: `Button ${i + 1} number_sync condition must be 'above' or 'below'.`, selector: i === selectedButtonIndex ? '#number-sync-condition-group' : null });
+      }
+      if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOn || '')) || !/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOff || ''))) {
+        issues.errors.push({ message: `Button ${i + 1} number_sync mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
+      }
     }
 
     // Only checkable buttons need onState and icon validation (timer_sync has its own state tracking)

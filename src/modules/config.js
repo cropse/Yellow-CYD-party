@@ -346,6 +346,8 @@ export const DEFAULT_BUTTON = {
   haEntity: null,
   onState: 'on',
   timerDefaultLabel: '',
+  threshold: null,
+  condition: 'above',
   iconOn: null,
   iconOff: null,
   shortPress: {

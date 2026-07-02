@@ -488,11 +488,14 @@ function setupButtonEditor() {
       });
       btn.classList.add('active');
       btn.setAttribute('aria-checked', 'true');
-      const hasHomeAssistantEntity = type === 'checkable' || type === 'timer_sync' || type === 'sensor_sync';
-      const hasCheckableIcons = type === 'checkable' || type === 'timer_sync';
+      const hasHomeAssistantEntity = type === 'checkable' || type === 'timer_sync' || type === 'number_sync';
+      const hasCheckableIcons = type === 'checkable' || type === 'timer_sync' || type === 'number_sync';
       document.getElementById('checkable-options').classList.toggle('hidden', !hasHomeAssistantEntity);
       document.getElementById('checkable-icons').classList.toggle('hidden', !hasCheckableIcons);
       document.getElementById('timer-default-label-group')?.classList.toggle('hidden', type !== 'timer_sync');
+      document.getElementById('on-state-group')?.classList.toggle('hidden', type !== 'checkable');
+      document.getElementById('number-sync-threshold-group')?.classList.toggle('hidden', type !== 'number_sync');
+      document.getElementById('number-sync-condition-group')?.classList.toggle('hidden', type !== 'number_sync');
     });
   });
 
@@ -506,6 +509,22 @@ function setupButtonEditor() {
 
   document.getElementById('timer-default-label')?.addEventListener('input', (e) => {
     store.button('timerDefaultLabel', e.target.value);
+  });
+
+  document.getElementById('number-threshold')?.addEventListener('input', (e) => {
+    store.button('threshold', e.target.value === '' ? null : Number(e.target.value));
+  });
+
+  document.querySelectorAll('#number-sync-condition-group .type-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#number-sync-condition-group .type-toggle button').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-checked', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-checked', 'true');
+      store.button('condition', btn.dataset.condition);
+    });
   });
 }
 

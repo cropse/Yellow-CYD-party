@@ -266,72 +266,70 @@ describe('generatePackages', () => {
     assert.ok(out.includes('timer_sync_template') || out.includes('timer') || out.includes('packages:'));
   });
 
-  it('sensor_sync button generates sensor sync package', () => {
-    const config = { ...baseConfig, buttons: [sensorSyncFixtures.happyPath] };
+  it('number_sync button generates number sync package', () => {
+    const config = { ...baseConfig, buttons: [numberSyncFixtures.happyPath] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
-    assert.ok(out.includes('btn_sensor_1'), 'should include btn_sensor_1 package key');
-    assert.ok(out.includes('sensor_sync_template.yaml'), 'should reference sensor_sync_template.yaml');
+    assert.ok(out.includes('btn_number_1'), 'should include btn_number_1 package key');
+    assert.ok(out.includes('number_sync_template.yaml'), 'should reference number_sync_template.yaml');
     assert.ok(out.includes('ts_btn_1_sensor'), 'should pass ts_id var');
     assert.ok(out.includes('sensor.gecko_sensor_humidity'), 'should pass ha_entity var');
     assert.ok(out.includes('btn_id: btn_1'), 'should pass btn_id var');
+    assert.ok(out.includes('threshold:'), 'should pass threshold var');
+    assert.ok(out.includes('condition:'), 'should pass condition var');
     assert.ok(out.includes('default_label:'), 'should pass default_label var');
+    assert.ok(out.includes('ico_on:'), 'should pass ico_on var');
+    assert.ok(out.includes('ico_off:'), 'should pass ico_off var');
   });
 
-  it('sensor_sync with blank entity does NOT generate package', () => {
-    const config = { ...baseConfig, buttons: [sensorSyncFixtures.blankEntity] };
+  it('number_sync with blank entity does NOT generate package', () => {
+    const config = { ...baseConfig, buttons: [numberSyncFixtures.blankEntity] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
-    assert.ok(!out.includes('btn_sensor_4'), 'should not generate package for blank entity');
-    assert.ok(!out.includes('sensor_sync_template'), 'should not reference sensor template');
+    assert.ok(!out.includes('btn_number_'), 'should not generate package for blank entity');
+    assert.ok(!out.includes('number_sync_template'), 'should not reference number template');
   });
 
-  it('sensor_sync with no-unit label passes default_label "123"', () => {
-    const config = { ...baseConfig, buttons: [sensorSyncFixtures.noUnit] };
+  it('number_sync with above condition passes threshold and condition', () => {
+    const config = { ...baseConfig, buttons: [numberSyncFixtures.aboveCondition] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
-    assert.ok(out.includes('btn_sensor_1'), 'should include btn_sensor_1 package key');
-    assert.ok(out.includes('default_label: "123"'), 'should pass label "123" as default_label');
+    assert.ok(out.includes('btn_number_1'), 'should include btn_number_1 package key');
+    assert.ok(out.includes('threshold: 25'), 'should pass threshold 25');
+    assert.ok(out.includes('condition: above'), 'should pass condition above');
   });
 
-  it('sensor_sync with unavailable fallback label passes default_label "--"', () => {
-    const config = { ...baseConfig, buttons: [sensorSyncFixtures.unavailableFallback] };
+  it('number_sync with below condition passes threshold and condition', () => {
+    const config = { ...baseConfig, buttons: [numberSyncFixtures.belowCondition] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
-    assert.ok(out.includes('btn_sensor_1'), 'should include btn_sensor_1 package key');
-    assert.ok(out.includes('default_label: "--"'), 'should pass label "--" as default_label');
+    assert.ok(out.includes('btn_number_1'), 'should include btn_number_1 package key');
+    assert.ok(out.includes('threshold: 80'), 'should pass threshold 80');
+    assert.ok(out.includes('condition: below'), 'should pass condition below');
   });
 
-  it('sensor_sync with invalid domain still generates package (domain validation is separate)', () => {
-    const config = { ...baseConfig, buttons: [sensorSyncFixtures.invalidDomain] };
+  it('number_sync with invalid domain still generates package (domain validation is separate)', () => {
+    const config = { ...baseConfig, buttons: [numberSyncFixtures.invalidDomain] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
-    assert.ok(out.includes('btn_sensor_1'), 'should generate package for invalid domain');
-    assert.ok(out.includes('sensor_sync_template.yaml'), 'should reference sensor template');
+    assert.ok(out.includes('btn_number_1'), 'should generate package for invalid domain');
+    assert.ok(out.includes('number_sync_template.yaml'), 'should reference number template');
     assert.ok(out.includes('switch.garden_lights'), 'should pass switch.garden_lights as ha_entity');
   });
 
-  it('sensor_sync does not require onState, iconOn, iconOff, or timerDefaultLabel', () => {
-    const config = { ...baseConfig, buttons: [sensorSyncFixtures.noOptionalFields] };
+  it('number_sync does not require onState or timerDefaultLabel', () => {
+    const config = { ...baseConfig, buttons: [numberSyncFixtures.noOptionalFields] };
     const out = render(generatePackages(config, { ...sectionDeps, config }));
-    assert.ok(out.includes('btn_sensor_1'), 'should generate package without optional fields');
-    assert.ok(out.includes('sensor_sync_template.yaml'), 'should reference sensor_sync_template.yaml');
-    assert.ok(out.includes('default_label: "54%"'), 'should pass label "54%" as default_label');
+    assert.ok(out.includes('btn_number_1'), 'should generate package without optional fields');
+    assert.ok(out.includes('number_sync_template.yaml'), 'should reference number_sync_template.yaml');
     assert.ok(!out.includes('on_state:'), 'should not include on_state var');
-    assert.ok(!out.includes('ico_on:'), 'should not include ico_on var');
-    assert.ok(!out.includes('ico_off:'), 'should not include ico_off var');
+    assert.ok(out.includes('ico_on:'), 'should include ico_on var');
+    assert.ok(out.includes('ico_off:'), 'should include ico_off var');
   });
 
-  // ── Sensor sync fixture definitions ─────────────────────────
-  // Used by Tasks 5, 6, 8, 9, 10 for sensor_sync button type
-  const sensorSyncFixtures = {
-    // Happy-path: sensor with unit, value 54 + "%" → "54%"
-    happyPath: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_1', label: 'Sensor', col: 0, row: 0, icon: '\\U000F0335', color: 'FF0000', shortPress: { enabled: true }, longPress: { enabled: false } },
-    // No unit: numeric value 123 → "123"
-    noUnit: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_2', label: '123', col: 1, row: 0, icon: '\\U000F0335', color: '00FF00', shortPress: { enabled: true }, longPress: { enabled: false } },
-    // Invalid domain: switch entity should be rejected by domain validation
-    invalidDomain: { type: 'sensor_sync', haEntity: 'switch.garden_lights', id: 'btn_3', label: 'Invalid', col: 2, row: 0, icon: '\\U000F0335', color: '0000FF', shortPress: { enabled: true }, longPress: { enabled: false } },
-    // Blank entity: empty haEntity should be rejected by entity validation
-    blankEntity: { type: 'sensor_sync', haEntity: '', id: 'btn_4', label: 'Blank', col: 3, row: 0, icon: '\\U000F0335', color: 'FF00FF', shortPress: { enabled: true }, longPress: { enabled: false } },
-    // Unavailable fallback: label "--" shown when sensor unavailable
-    unavailableFallback: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_5', label: '--', col: 0, row: 1, icon: '\\U000F0335', color: 'FFFF00', shortPress: { enabled: true }, longPress: { enabled: false } },
-    // No optional fields: sensor_sync does not need onState, iconOn, iconOff, timerDefaultLabel
-    noOptionalFields: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_6', label: '54%', col: 1, row: 1, icon: '\\U000F0335', color: '00FFFF', shortPress: { enabled: true }, longPress: { enabled: false } },
+  // ── Number sync fixture definitions ─────────────────────────
+  const numberSyncFixtures = {
+    happyPath: { type: 'number_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_1', label: 'Humidity', col: 0, row: 0, icon: '\\U000F0335', color: 'FF0000', threshold: 50, condition: 'above', iconOn: '\\U000F0335', iconOff: '\\U000F0594', shortPress: { enabled: true }, longPress: { enabled: false } },
+    aboveCondition: { type: 'number_sync', haEntity: 'sensor.temperature', id: 'btn_1', label: 'Temp', col: 0, row: 0, icon: '\\U000F0335', color: 'FF0000', threshold: 25, condition: 'above', iconOn: '\\U000F0335', iconOff: '\\U000F0594', shortPress: { enabled: true }, longPress: { enabled: false } },
+    belowCondition: { type: 'number_sync', haEntity: 'sensor.humidity', id: 'btn_1', label: 'Hum', col: 0, row: 0, icon: '\\U000F0335', color: 'FF0000', threshold: 80, condition: 'below', iconOn: '\\U000F0335', iconOff: '\\U000F0594', shortPress: { enabled: true }, longPress: { enabled: false } },
+    invalidDomain: { type: 'number_sync', haEntity: 'switch.garden_lights', id: 'btn_1', label: 'Invalid', col: 0, row: 0, icon: '\\U000F0335', color: '0000FF', threshold: 25, condition: 'above', iconOn: '\\U000F0335', iconOff: '\\U000F0594', shortPress: { enabled: true }, longPress: { enabled: false } },
+    blankEntity: { type: 'number_sync', haEntity: '', id: 'btn_1', label: 'Blank', col: 0, row: 0, icon: '\\U000F0335', color: 'FF00FF', threshold: 25, condition: 'above', iconOn: '\\U000F0335', iconOff: '\\U000F0594', shortPress: { enabled: true }, longPress: { enabled: false } },
+    noOptionalFields: { type: 'number_sync', haEntity: 'sensor.gecko_sensor_humidity', id: 'btn_1', label: '54%', col: 0, row: 0, icon: '\\U000F0335', color: '00FFFF', threshold: 50, condition: 'above', iconOn: '\\U000F0335', iconOff: '\\U000F0594', shortPress: { enabled: true }, longPress: { enabled: false } },
   };
 
   it('stateless button does NOT generate state sync', () => {
@@ -472,14 +470,15 @@ describe('generateLVGLWidgets', () => {
     assert.ok(out.includes('cyd_button_widget.yaml'));
   });
 
-  it('sensor_sync button uses standard template', () => {
+  it('number_sync button uses checkable widget template', () => {
     const btns = [{
-      type: 'sensor_sync', id: 'btn_1', col: 0, row: 0, icon: '\\U000F0335', label: 'Sensor', color: 'FF0000',
+      type: 'number_sync', id: 'btn_1', col: 0, row: 0, icon: '\\U000F0335', label: 'Sensor', color: 'FF0000',
+      threshold: 50, condition: 'above', iconOn: '\\U000F0335', iconOff: '\\U000F0594',
       shortPress: { enabled: true }, longPress: { enabled: false }
     }];
     const out = render(generateLVGLWidgets(btns, sectionDeps));
-    assert.ok(out.includes('cyd_button_widget.yaml'), 'should use standard widget template');
-    assert.ok(!out.includes('cyd_button_widget_checkable.yaml'), 'should NOT use checkable widget template');
+    assert.ok(out.includes('cyd_button_widget_checkable.yaml'), 'should use checkable widget template');
+    assert.ok(!out.includes('cyd_button_widget.yaml'), 'should NOT use standard widget template');
   });
 
   it('buttons are sorted by row then col', () => {

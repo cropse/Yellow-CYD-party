@@ -90,7 +90,7 @@ function normalizeButton(rawButton, index, warnings = [], maxCol = 3, maxRow = 2
     font: ['roboto_12', 'roboto_16', 'arimo14'].includes(source.font) ? source.font : fallback.font,
     color: normalizeColor(source.color) || fallback.color,
     icon: /^\\U000F[0-9A-Fa-f]{4}$/.test(String(source.icon || '')) ? source.icon.toUpperCase() : fallback.icon,
-    type: ['stateless', 'checkable', 'timer_sync', 'sensor_sync'].includes(source.type) ? source.type : fallback.type,
+    type: ['stateless', 'checkable', 'timer_sync', 'number_sync'].includes(source.type) ? source.type : fallback.type,
     haEntity: source.haEntity ? String(source.haEntity).trim() : null,
     onState: String(source.onState || fallback.onState || 'on').trim() || 'on',
     timerDefaultLabel: String(source.timerDefaultLabel || ''),
@@ -525,6 +525,8 @@ function parseButtonsFromLVGL(raw, colorMap) {
           haEntity: null,
           onState: 'on',
           timerDefaultLabel: '',
+          threshold: null,
+          condition: 'above',
           iconOn: null,
           iconOff: null,
           shortPress: { enabled: false, actionType: '', action: '', data: {} },
@@ -584,12 +586,18 @@ function parseSyncPackages(raw, buttons) {
         buttons[idx].haEntity = entityId;
         buttons[idx].timerDefaultLabel = asString(vars.default_label || '');
       }
-    } else if (key.startsWith('btn_sensor_')) {
-      // sensor_sync
+    } else if (key.startsWith('btn_number_')) {
+      // number_sync
       if (idx >= 0 && buttons[idx]) {
-        buttons[idx].type = 'sensor_sync';
+        buttons[idx].type = 'number_sync';
         buttons[idx].haEntity = entityId;
+        buttons[idx].threshold = vars.threshold != null ? Number(vars.threshold) : null;
+        buttons[idx].condition = asString(vars.condition || 'above');
+        buttons[idx].iconOn = iconFromYaml(vars.ico_on) || buttons[idx].iconOn;
+        buttons[idx].iconOff = iconFromYaml(vars.ico_off) || buttons[idx].iconOff;
       }
+    } else if (key.startsWith('btn_sensor_')) {
+      // Legacy sensor_sync — reject (user chose to reject, not map)
     } else if (key.startsWith('led_sync_')) {
       // Per-button LED sync — also confirms checkable type
       if (idx >= 0 && buttons[idx]) {
@@ -741,6 +749,12 @@ export function importFromYAML(yamlText) {
         }
         if (metaButton?.timerDefaultLabel && !config.buttons[i].timerDefaultLabel) {
           config.buttons[i].timerDefaultLabel = metaButton.timerDefaultLabel;
+        }
+        if (metaButton?.threshold != null && config.buttons[i].threshold == null) {
+          config.buttons[i].threshold = Number(metaButton.threshold);
+        }
+        if (metaButton?.condition && !config.buttons[i].condition) {
+          config.buttons[i].condition = metaButton.condition;
         }
       }
     }

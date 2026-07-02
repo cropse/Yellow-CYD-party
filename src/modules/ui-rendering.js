@@ -69,6 +69,15 @@ export function createUIRendering({
     return getDefaultGridForBoard(boardConfig);
   }
 
+  // ponytail: state-sync buttons show iconOn in the preview — the main icon is the unavailable fallback
+  const previewIconOf = (btn) => {
+    if (!btn) return null;
+    if ((btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'number_sync') && btn.iconOn) {
+      return getIconByCodepoint(btn.iconOn);
+    }
+    return getIconByCodepoint(btn.icon);
+  };
+
   function renderGridPreview() {
     const container = document.getElementById('grid-preview');
     if (!container) return;
@@ -115,7 +124,7 @@ export function createUIRendering({
 
       if (btnIndex >= 0) {
         const btn = state.buttons[btnIndex];
-        const iconData = getIconByCodepoint(btn.icon);
+        const iconData = previewIconOf(btn);
 
         cell.innerHTML = `
           <span class="position-badge">${col + 1},${row + 1}</span>
@@ -170,7 +179,7 @@ export function createUIRendering({
           cell = replacement;
         } else if (btnIndex >= 0) {
           const btn = state.buttons[btnIndex];
-          const iconData = getIconByCodepoint(btn.icon);
+          const iconData = previewIconOf(btn);
           const fontSize = getPreviewFontSize(btn.font);
           const iconSpan = cell.querySelector('.icon');
           if (iconSpan) {
@@ -218,19 +227,32 @@ export function createUIRendering({
       b.setAttribute('aria-checked', isActive ? 'true' : 'false');
     });
 
-    const hasHomeAssistantEntity = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'sensor_sync';
-    const hasCheckableIcons = btn.type === 'checkable' || btn.type === 'timer_sync';
+    const hasHomeAssistantEntity = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'number_sync';
+    const hasCheckableIcons = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'number_sync';
     document.getElementById('checkable-options').classList.toggle('hidden', !hasHomeAssistantEntity);
     document.getElementById('checkable-icons').classList.toggle('hidden', !hasCheckableIcons);
     document.getElementById('timer-default-label-group')?.classList.toggle('hidden', btn.type !== 'timer_sync');
+    document.getElementById('on-state-group')?.classList.toggle('hidden', btn.type !== 'checkable');
+    document.getElementById('number-sync-threshold-group')?.classList.toggle('hidden', btn.type !== 'number_sync');
+    document.getElementById('number-sync-condition-group')?.classList.toggle('hidden', btn.type !== 'number_sync');
     document.getElementById('ha-entity').value = btn.haEntity || '';
     document.getElementById('on-state').value = btn.onState || 'on';
     document.getElementById('timer-default-label').value = btn.timerDefaultLabel || '';
+    document.getElementById('number-threshold').value = btn.threshold ?? '';
+    document.querySelectorAll('#number-sync-condition-group .type-toggle button').forEach(b => {
+      const isActive = b.dataset.condition === (btn.condition || 'above');
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    });
 
     updateColorDisplay(btn.color);
     updateIconPreview('icon', btn.icon);
     updateIconPreview('icon-on', btn.iconOn || btn.icon);
     updateIconPreview('icon-off', btn.iconOff || btn.icon);
+
+    // ponytail: relabel main icon for state-sync buttons — it's only shown when unavailable
+    const iconLabel = document.getElementById('icon-label');
+    if (iconLabel) iconLabel.textContent = hasCheckableIcons ? 'Icon Unavailable' : 'Icon';
 
     document.getElementById('short-action-type').value = btn.shortPress?.actionType || '';
     renderActionFields('short-action-fields', btn.shortPress?.actionType || '', btn.shortPress?.data || {}, false);

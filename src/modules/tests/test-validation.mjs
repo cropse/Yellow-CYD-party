@@ -327,88 +327,100 @@ describe('validateConfig - button-level validation', () => {
     assert.strictEqual(entityErrors.length, 1);
   });
 
-  // ── Sensor sync validation tests (Task 5) ──────────────────
-  test('sensor_sync button with valid sensor entity passes', () => {
+  // ── Number sync validation tests ──────────────────
+  test('number_sync button with valid sensor entity + threshold + icons passes', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].type = 'number_sync';
     cfg.buttons[0].haEntity = 'sensor.gecko_sensor_humidity';
+    cfg.buttons[0].threshold = 50;
+    cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].iconOn = '\\U000F0001';
+    cfg.buttons[0].iconOff = '\\U000F0002';
     const result = validateConfig(cfg);
-    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
-    assert.strictEqual(sensorErrors.length, 0);
+    const numberErrors = result.errors.filter(e => e.message.includes('number_sync'));
+    assert.strictEqual(numberErrors.length, 0);
   });
 
-  test('sensor_sync button with blank entity returns error', () => {
+  test('number_sync button with blank entity returns error', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].type = 'number_sync';
     cfg.buttons[0].haEntity = '';
+    cfg.buttons[0].threshold = 50;
+    cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].iconOn = '\\U000F0001';
+    cfg.buttons[0].iconOff = '\\U000F0002';
     const result = validateConfig(cfg);
     const entityErrors = result.errors.filter(e => e.message.includes('needs a Home Assistant entity'));
     assert.strictEqual(entityErrors.length, 1);
   });
 
-  test('sensor_sync button with null entity returns error', () => {
+  test('number_sync button with null entity returns error', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].type = 'number_sync';
     cfg.buttons[0].haEntity = null;
+    cfg.buttons[0].threshold = 50;
+    cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].iconOn = '\\U000F0001';
+    cfg.buttons[0].iconOff = '\\U000F0002';
     const result = validateConfig(cfg);
     const entityErrors = result.errors.filter(e => e.message.includes('needs a Home Assistant entity'));
     assert.strictEqual(entityErrors.length, 1);
   });
 
-  test('sensor_sync button with non-sensor domain returns error', () => {
+  test('number_sync button with non-sensor domain returns error', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].type = 'number_sync';
     cfg.buttons[0].haEntity = 'switch.garden_lights';
+    cfg.buttons[0].threshold = 50;
+    cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].iconOn = '\\U000F0001';
+    cfg.buttons[0].iconOff = '\\U000F0002';
     const result = validateConfig(cfg);
     const domainErrors = result.errors.filter(e => e.message.includes('requires a sensor.* entity'));
     assert.strictEqual(domainErrors.length, 1);
     assert.ok(domainErrors[0].message.includes('switch.garden_lights'));
   });
 
-  test('sensor_sync button does not require onState or icon icons', () => {
+  test('number_sync button without threshold returns error', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
+    cfg.buttons[0].type = 'number_sync';
     cfg.buttons[0].haEntity = 'sensor.temperature';
-    cfg.buttons[0].onState = '';
+    cfg.buttons[0].threshold = null;
+    cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].iconOn = '\\U000F0001';
+    cfg.buttons[0].iconOff = '\\U000F0002';
+    const result = validateConfig(cfg);
+    const thresholdErrors = result.errors.filter(e => e.message.includes('numeric threshold'));
+    assert.strictEqual(thresholdErrors.length, 1);
+  });
+
+  test('number_sync button without icons returns error', () => {
+    const cfg = makeValidConfig();
+    cfg.buttons[0].type = 'number_sync';
+    cfg.buttons[0].haEntity = 'sensor.temperature';
+    cfg.buttons[0].threshold = 50;
+    cfg.buttons[0].condition = 'above';
     cfg.buttons[0].iconOn = '';
     cfg.buttons[0].iconOff = '';
     const result = validateConfig(cfg);
-    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
-    assert.strictEqual(sensorErrors.length, 0);
+    const iconErrors = result.errors.filter(e => e.message.includes('on/off icon'));
+    assert.strictEqual(iconErrors.length, 1);
   });
 
-  test('sensor_sync button does not require timerDefaultLabel', () => {
+  test('number_sync button does not require onState or timerDefaultLabel', () => {
     const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
-    cfg.buttons[0].haEntity = 'sensor.gecko_sensor_humidity';
+    cfg.buttons[0].type = 'number_sync';
+    cfg.buttons[0].haEntity = 'sensor.temperature';
+    cfg.buttons[0].threshold = 50;
+    cfg.buttons[0].condition = 'above';
+    cfg.buttons[0].iconOn = '\\U000F0001';
+    cfg.buttons[0].iconOff = '\\U000F0002';
+    cfg.buttons[0].onState = '';
     cfg.buttons[0].timerDefaultLabel = '';
     const result = validateConfig(cfg);
-    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
-    assert.strictEqual(sensorErrors.length, 0);
+    const numberErrors = result.errors.filter(e => e.message.includes('number_sync'));
+    assert.strictEqual(numberErrors.length, 0);
   });
-
-  test('sensor_sync button with timerDefaultLabel set does not error', () => {
-    const cfg = makeValidConfig();
-    cfg.buttons[0].type = 'sensor_sync';
-    cfg.buttons[0].haEntity = 'sensor.gecko_sensor_humidity';
-    cfg.buttons[0].timerDefaultLabel = 'My Sensor';
-    const result = validateConfig(cfg);
-    const sensorErrors = result.errors.filter(e => e.message.includes('sensor_sync'));
-    assert.strictEqual(sensorErrors.length, 0);
-  });
-
-  // ── Sensor sync fixture definitions ─────────────────────────
-  // Used by Tasks 5, 6, 8, 9, 10 for sensor_sync button type
-  const sensorSyncValidationFixtures = {
-    // Happy-path: sensor.gecko_sensor_humidity with valid domain
-    validSensorEntity: { type: 'sensor_sync', haEntity: 'sensor.gecko_sensor_humidity', onState: '', iconOn: '', iconOff: '' },
-    // Invalid domain: switch.* should fail domain validation (Task 5)
-    invalidDomain: { type: 'sensor_sync', haEntity: 'switch.garden_lights', onState: '', iconOn: '', iconOff: '' },
-    // Blank entity: empty string should fail entity validation
-    blankEntity: { type: 'sensor_sync', haEntity: '', onState: '', iconOn: '', iconOff: '' },
-    // Null entity: should fail entity validation
-    nullEntity: { type: 'sensor_sync', haEntity: null, onState: '', iconOn: '', iconOff: '' },
-  };
 
   test('checkable button with missing onState returns error', () => {
     const cfg = makeValidConfig();

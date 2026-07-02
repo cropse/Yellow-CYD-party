@@ -1,0 +1,127 @@
+# number_sync_template.yaml
+# Icon flip based on numeric threshold comparison against a sensor.* entity.
+# Text label shows button label + sensor value + unit (e.g. "Humidity 54 %").
+substitutions:
+  ts_id: ""
+  ha_entity: ""
+  btn_id: ""
+  threshold: "0"
+  condition: "above"
+  default_label: ""
+  ico_on: ""
+  ico_off: ""
+
+text_sensor:
+  - platform: homeassistant
+    id: ${ts_id}_state
+    entity_id: ${ha_entity}
+    on_value:
+      then:
+        - lvgl.widget.update:
+            id: ${btn_id}
+            state:
+              checked: !lambda |-
+                if (x == "unknown" || x == "unavailable" || x == "") {
+                  return false;
+                }
+                float val = strtof(x.c_str(), nullptr);
+                if ("${condition}" == "above") {
+                  return val >= ${threshold};
+                } else {
+                  return val <= ${threshold};
+                }
+              disabled: !lambda 'return x == "unavailable" || x == "unknown";'
+        - lvgl.label.update:
+            id: lbl_${btn_id}
+            text: !lambda |-
+              if (x == "unknown" || x == "unavailable" || x == "") {
+                return "${ico_off}";
+              }
+              float val = strtof(x.c_str(), nullptr);
+              if ("${condition}" == "above") {
+                if (val >= ${threshold}) {
+                  return "${ico_on}";
+                } else {
+                  return "${ico_off}";
+                }
+              } else {
+                if (val <= ${threshold}) {
+                  return "${ico_on}";
+                } else {
+                  return "${ico_off}";
+                }
+              }
+        - lvgl.label.update:
+            id: lbl_text_${btn_id}
+            text: !lambda |-
+              auto unit = id(${ts_id}_unit).state;
+              if (x == "unknown" || x == "unavailable" || x == "") {
+                return "${default_label} --";
+              }
+              char buf[96];
+              if (unit == "") {
+                snprintf(buf, sizeof(buf), "${default_label} %s", x.c_str());
+              } else {
+                snprintf(buf, sizeof(buf), "${default_label} %s %s", x.c_str(), unit.c_str());
+              }
+              return buf;
+
+  - platform: homeassistant
+    id: ${ts_id}_unit
+    entity_id: ${ha_entity}
+    attribute: unit_of_measurement
+
+interval:
+  - interval: 5s
+    then:
+      - lvgl.widget.update:
+          id: ${btn_id}
+          state:
+            checked: !lambda |-
+              auto state = id(${ts_id}_state).state;
+              if (state == "unknown" || state == "unavailable" || state == "") {
+                return false;
+              }
+              float val = strtof(state.c_str(), nullptr);
+              if ("${condition}" == "above") {
+                return val >= ${threshold};
+              } else {
+                return val <= ${threshold};
+              }
+            disabled: !lambda 'auto s = id(${ts_id}_state).state; return s == "unavailable" || s == "unknown";'
+      - lvgl.label.update:
+          id: lbl_${btn_id}
+          text: !lambda |-
+            auto state = id(${ts_id}_state).state;
+            if (state == "unknown" || state == "unavailable" || state == "") {
+              return "${ico_off}";
+            }
+            float val = strtof(state.c_str(), nullptr);
+            if ("${condition}" == "above") {
+              if (val >= ${threshold}) {
+                return "${ico_on}";
+              } else {
+                return "${ico_off}";
+              }
+            } else {
+              if (val <= ${threshold}) {
+                return "${ico_on}";
+              } else {
+                return "${ico_off}";
+              }
+            }
+      - lvgl.label.update:
+          id: lbl_text_${btn_id}
+          text: !lambda |-
+            auto state = id(${ts_id}_state).state;
+            auto unit = id(${ts_id}_unit).state;
+            if (state == "unknown" || state == "unavailable" || state == "") {
+              return "${default_label} --";
+            }
+            char buf[96];
+            if (unit == "") {
+              snprintf(buf, sizeof(buf), "${default_label} %s", state.c_str());
+            } else {
+              snprintf(buf, sizeof(buf), "${default_label} %s %s", state.c_str(), unit.c_str());
+            }
+            return buf;

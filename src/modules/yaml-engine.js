@@ -542,7 +542,7 @@ export function generatePackages(buttons, deps) {
 
   btnList.forEach((btn, i) => {
     if (btn.empty) return;
-    if (!['checkable', 'timer_sync', 'sensor_sync'].includes(btn.type) || !String(btn.haEntity || '').trim()) return;
+    if (!['checkable', 'timer_sync', 'number_sync'].includes(btn.type) || !String(btn.haEntity || '').trim()) return;
 
     const escapedState = String(btn.onState || 'on').replace(/"/g, '\\"');
 
@@ -555,15 +555,21 @@ export function generatePackages(buttons, deps) {
       ha_entity: ${yamlScalar(btn.haEntity)}
       btn_id: ${btn.id}
       default_label: ${yamlQuoted(timerLabel)}`);
-    } else if (btn.type === 'sensor_sync') {
-      const sensorLabel = (btn.label || '').replace(/"/g, '\\"');
-      packages.push(`  btn_sensor_${i + 1}: !include
-    file: cyd-lib/templates/sensor_sync_template.yaml
+    } else if (btn.type === 'number_sync') {
+      const label = (btn.label || '').replace(/"/g, '\\"');
+      const iconOn = btn.iconOn || btn.icon;
+      const iconOff = btn.iconOff || btn.icon;
+      packages.push(`  btn_number_${i + 1}: !include
+    file: cyd-lib/templates/number_sync_template.yaml
     vars:
       ts_id: ts_${btn.id}_sensor
       ha_entity: ${yamlScalar(btn.haEntity)}
       btn_id: ${btn.id}
-      default_label: ${yamlQuoted(sensorLabel)}`);
+      threshold: ${btn.threshold || 0}
+      condition: ${btn.condition || 'above'}
+      default_label: ${yamlQuoted(label)}
+      ico_on: "${iconOn}"
+      ico_off: "${iconOff}"`);
     } else {
       const iconOn = btn.iconOn || btn.icon;
       const iconOff = btn.iconOff || btn.icon;
@@ -649,7 +655,7 @@ export function generateLVGLWidgets(buttons, deps) {
 
   sorted.forEach(btn => {
     if (btn.empty || btn.col >= gridColumns || btn.row >= gridRows) return;
-    const isCheckable = btn.type === 'checkable';
+    const isCheckable = btn.type === 'checkable' || btn.type === 'number_sync';
     const hasTimerDefaultLabel = isCheckable && btn.timerDefaultLabel && String(btn.timerDefaultLabel).trim();
     const colorRef = `btn_${buttons.indexOf(btn) + 1}_color`;
 
@@ -782,8 +788,10 @@ export function encodeMetadata(normalizedConfig) {
       id: btn.id,
       name: btn.name,
       empty: btn.empty || undefined,
-      timerDefaultLabel: btn.timerDefaultLabel || undefined
-    })).filter(b => b.name !== `Button ${b.id?.replace('btn_', '')}` || b.empty || b.timerDefaultLabel)
+      timerDefaultLabel: btn.timerDefaultLabel || undefined,
+      threshold: btn.threshold != null ? String(btn.threshold) : undefined,
+      condition: btn.condition && btn.condition !== 'above' ? btn.condition : undefined
+    })).filter(b => b.name !== `Button ${b.id?.replace('btn_', '')}` || b.empty || b.timerDefaultLabel || b.threshold || b.condition)
   };
 
   const payload = {
