@@ -340,7 +340,7 @@
 
         <div class="form-group">
           <label>Button Type</label>
-          <div class="type-toggle" role="radiogroup">
+          <div class="type-toggle" id="button-type-toggle" role="radiogroup">
             <button type="button" class="active" data-type="stateless" role="radio" aria-checked="true">Stateless</button>
             <button type="button" data-type="checkable" role="radio" aria-checked="false">Checkable</button>
             <button type="button" data-type="timer_sync" role="radio" aria-checked="false">Timer Sync</button>
@@ -363,7 +363,7 @@
           </div>
           <div class="form-group hidden" id="number-sync-condition-group">
             <label for="number-condition">Condition</label>
-            <div class="type-toggle" role="radiogroup" aria-label="Threshold condition">
+            <div class="type-toggle condition-toggle" role="radiogroup" aria-label="Threshold condition">
               <button type="button" data-condition="above" role="radio" aria-checked="true">Above</button>
               <button type="button" data-condition="below" role="radio" aria-checked="false">Below</button>
             </div>

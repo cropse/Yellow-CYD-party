@@ -476,13 +476,13 @@ function setupButtonEditor() {
     store.button('font', e.target.value);
   });
 
-  document.querySelectorAll('.type-toggle button').forEach(btn => {
+  document.querySelectorAll('#button-type-toggle button').forEach(btn => {
     btn.addEventListener('click', () => {
       const type = btn.dataset.type;
       store.update('Change button type', state => {
         state.buttons[selectedButtonIndex].type = type;
       });
-      document.querySelectorAll('.type-toggle button').forEach(b => {
+      document.querySelectorAll('#button-type-toggle button').forEach(b => {
         b.classList.remove('active');
         b.setAttribute('aria-checked', 'false');
       });
@@ -515,9 +515,9 @@ function setupButtonEditor() {
     store.button('threshold', e.target.value === '' ? null : Number(e.target.value));
   });
 
-  document.querySelectorAll('#number-sync-condition-group .type-toggle button').forEach(btn => {
+  document.querySelectorAll('.condition-toggle button').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('#number-sync-condition-group .type-toggle button').forEach(b => {
+      document.querySelectorAll('.condition-toggle button').forEach(b => {
         b.classList.remove('active');
         b.setAttribute('aria-checked', 'false');
       });

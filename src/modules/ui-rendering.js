@@ -239,7 +239,7 @@ export function createUIRendering({
     document.getElementById('on-state').value = btn.onState || 'on';
     document.getElementById('timer-default-label').value = btn.timerDefaultLabel || '';
     document.getElementById('number-threshold').value = btn.threshold ?? '';
-    document.querySelectorAll('#number-sync-condition-group .type-toggle button').forEach(b => {
+    document.querySelectorAll('.condition-toggle button').forEach(b => {
       const isActive = b.dataset.condition === (btn.condition || 'above');
       b.classList.toggle('active', isActive);
       b.setAttribute('aria-checked', isActive ? 'true' : 'false');
