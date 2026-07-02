@@ -410,7 +410,7 @@ function fingerprintBoard(raw, sub) {
     const hwEsp32 = hw.esp32 || {};
     if (hwEsp32.board !== boardName) continue;
     if (hwEsp32.framework !== fwType && !(fwType === 'esp-idf' && hwEsp32.framework === 'esp-idf')) continue;
-    if (bc.width !== sub.width || bc.height !== sub.height) continue;
+    if (Number(bc.width) !== Number(sub.width) || Number(bc.height) !== Number(sub.height)) continue;
     if (bc.capabilities?.rgbLed !== hasRgb) continue;
     return id;
   }
