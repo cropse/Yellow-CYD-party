@@ -236,7 +236,7 @@ export function createUIRendering({
     document.getElementById('number-sync-threshold-group')?.classList.toggle('hidden', btn.type !== 'number_sync');
     document.getElementById('number-sync-condition-group')?.classList.toggle('hidden', btn.type !== 'number_sync');
     document.getElementById('ha-entity').value = btn.haEntity || '';
-    document.getElementById('on-state').value = btn.onState || 'on';
+    document.getElementById('on-state').value = btn.onState ?? 'on';
     document.getElementById('timer-default-label').value = btn.timerDefaultLabel || '';
     document.getElementById('number-threshold').value = btn.threshold ?? '';
     document.querySelectorAll('.condition-toggle button').forEach(b => {
