@@ -186,6 +186,7 @@ font:
       - "\U000F0E0A"
       - "\U000F1915"
       - "\U000F025A"
+      - "\U000F0026"
 
 color:
   - id: room_bg_color
@@ -407,6 +408,7 @@ packages:
       on_state: "on"
       ico_on: "\U000F059C"
       ico_off: "\U000F0594"
+      ico_alert: "\U000F0026"
   btn_logic_4: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -416,6 +418,7 @@ packages:
       on_state: "playing"
       ico_on: "\U000F040A"
       ico_off: "\U000F03E4"
+      ico_alert: "\U000F0026"
   btn_timer_6: !include
     file: cyd-lib/templates/timer_sync_template.yaml
     vars:
@@ -432,6 +435,7 @@ packages:
       on_state: "opening"
       ico_on: "\U000F1846"
       ico_off: "\U000F1847"
+      ico_alert: "\U000F0026"
   btn_logic_9: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -441,6 +445,7 @@ packages:
       on_state: "on"
       ico_on: "\U000F0402"
       ico_off: "\U000F1A5C"
+      ico_alert: "\U000F0026"
   btn_logic_10: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -450,6 +455,7 @@ packages:
       on_state: "on"
       ico_on: "\U000F091D"
       ico_off: "\U000F17C9"
+      ico_alert: "\U000F0026"
   btn_logic_11: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -459,6 +465,7 @@ packages:
       on_state: "on"
       ico_on: "\U000F1855"
       ico_off: "\U000F0E0A"
+      ico_alert: "\U000F0026"
   btn_logic_12: !include
     file: cyd-lib/templates/lvgl_sync_template.yaml
     vars:
@@ -468,6 +475,7 @@ packages:
       on_state: "on"
       ico_on: "\U000F025A"
       ico_off: "\U000F1915"
+      ico_alert: "\U000F0026"
   led_sync:
     text_sensor:
       - platform: homeassistant

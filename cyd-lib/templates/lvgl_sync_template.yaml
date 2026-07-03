@@ -6,6 +6,7 @@ substitutions:
   btn_id: ""
   ico_on: ""
   ico_off: ""
+  ico_alert: "\\U000F0026"
 
 text_sensor:
   - platform: homeassistant
@@ -22,6 +23,9 @@ text_sensor:
             id: lbl_${btn_id}
             text: !lambda |-
               // No .c_str() needed, we use the literal substitution directly
+              if (x == "unavailable" || x == "unknown") {
+                return "${ico_alert}";
+              }
               if (x == "${on_state}") {
                 return "${ico_on}";
               } else {

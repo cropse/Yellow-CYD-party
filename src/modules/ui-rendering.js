@@ -217,7 +217,7 @@ export function createUIRendering({
     const btn = state.buttons[getSelectedIndex()];
     if (!btn) return;
 
-    document.getElementById('btn-number').textContent = getSelectedIndex() + 1;
+    document.getElementById('btn-number').textContent = btn.row * getGridColumns() + btn.col + 1;
     document.getElementById('btn-label').value = btn.label;
     document.getElementById('btn-font').value = btn.font;
 

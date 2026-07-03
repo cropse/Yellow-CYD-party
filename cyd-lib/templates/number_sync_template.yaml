@@ -10,6 +10,7 @@ substitutions:
   default_label: ""
   ico_on: ""
   ico_off: ""
+  ico_alert: "\\U000F0026"
 
 text_sensor:
   - platform: homeassistant
@@ -35,7 +36,7 @@ text_sensor:
             id: lbl_${btn_id}
             text: !lambda |-
               if (x == "unknown" || x == "unavailable" || x == "") {
-                return "${ico_off}";
+                return "${ico_alert}";
               }
               float val = strtof(x.c_str(), nullptr);
               if ("${condition}" == "above") {
@@ -94,7 +95,7 @@ interval:
           text: !lambda |-
             auto state = id(${ts_id}_state).state;
             if (state == "unknown" || state == "unavailable" || state == "") {
-              return "${ico_off}";
+              return "${ico_alert}";
             }
             float val = strtof(state.c_str(), nullptr);
             if ("${condition}" == "above") {

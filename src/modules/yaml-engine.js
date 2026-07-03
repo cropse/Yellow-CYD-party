@@ -86,14 +86,21 @@ export function toYAML(obj, indent = 0) {
   return String(obj);
 }
 
+const ALERT_GLYPH = '\\U000F0026';
+
 export function extractGlyphs(buttons) {
   const glyphs = new Set();
+  let hasStateSync = false;
   buttons.forEach(btn => {
     if (btn.empty) return;
     if (btn.icon) glyphs.add(btn.icon);
     if (btn.iconOn) glyphs.add(btn.iconOn);
     if (btn.iconOff) glyphs.add(btn.iconOff);
+    if (['checkable', 'timer_sync', 'number_sync'].includes(btn.type) && String(btn.haEntity || '').trim()) {
+      hasStateSync = true;
+    }
   });
+  if (hasStateSync) glyphs.add(ALERT_GLYPH);
   return Array.from(glyphs);
 }
 
@@ -569,7 +576,8 @@ export function generatePackages(buttons, deps) {
       condition: ${btn.condition || 'above'}
       default_label: ${yamlQuoted(label)}
       ico_on: "${iconOn}"
-      ico_off: "${iconOff}"`);
+      ico_off: "${iconOff}"
+      ico_alert: "${ALERT_GLYPH}"`);
     } else {
       const iconOn = btn.iconOn || btn.icon;
       const iconOff = btn.iconOff || btn.icon;
@@ -582,7 +590,8 @@ export function generatePackages(buttons, deps) {
       btn_id: ${btn.id}
       on_state: "${escapedState}"
       ico_on: "${iconOn}"
-      ico_off: "${iconOff}"`);
+      ico_off: "${iconOff}"
+      ico_alert: "${ALERT_GLYPH}"`);
     }
 
     if (btn.ledControl) {

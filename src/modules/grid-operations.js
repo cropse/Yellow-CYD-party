@@ -144,11 +144,14 @@ export function createGridOperations(deps) {
       showToast('Grid is full — remove a button first', 'error');
       return;
     }
+    // ponytail: slot-based naming (row*cols+col+1) — stable per cell, won't stack on repeated create/reset
+    const cols = state.gridColumns || getGridColumns();
+    const slotNum = target.row * cols + target.col + 1;
     store.update('Add new button', next => {
       const newBtn = structuredClone(DEFAULT_BUTTON);
       newBtn.id = `btn_${Date.now()}`;
-      newBtn.name = `Button ${next.buttons.length + 1}`;
-      newBtn.label = `Btn ${next.buttons.length + 1}`;
+      newBtn.name = `Button ${slotNum}`;
+      newBtn.label = `Btn ${slotNum}`;
       newBtn.col = target.col;
       newBtn.row = target.row;
       next.buttons.push(newBtn);
