@@ -33,14 +33,14 @@ describe('validateActionPayload', () => {
   test('script action with valid data passes', () => {
     const issues = { errors: [], warnings: [] };
     const actionObj = { enabled: true, actionType: 'script', action: 'script.good_night', data: { action: 'script.good_night' } };
-    validateActionPayload(0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
     assert.strictEqual(issues.errors.length, 0);
   });
 
   test('script action with empty data fails', () => {
     const issues = { errors: [], warnings: [] };
     const actionObj = { enabled: true, actionType: 'script', action: '', data: {} };
-    validateActionPayload(0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
     // validateActionPayload only checks that actionType is present — it doesn't validate data
     // So if actionType is set, it passes validation at this level
     // The action: '' is not caught by this validator; we test that if actionType is missing it's caught
@@ -50,14 +50,14 @@ describe('validateActionPayload', () => {
   test('switch action with entity_id passes', () => {
     const issues = { errors: [], warnings: [] };
     const actionObj = { enabled: true, actionType: 'switch', action: '', data: { entityId: 'switch.garden_light', operation: 'toggle' } };
-    validateActionPayload(0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
     assert.strictEqual(issues.errors.length, 0);
   });
 
   test('custom action with missing required field passes at action level (not deep-validated by validateActionPayload)', () => {
     const issues = { errors: [], warnings: [] };
     const actionObj = { enabled: true, actionType: 'custom', action: '', data: {} };
-    validateActionPayload(0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
     // validateActionPayload only checks actionType existence, not data completeness
     assert.strictEqual(issues.errors.length, 0);
   });
@@ -65,7 +65,7 @@ describe('validateActionPayload', () => {
   test('enabled action with no actionType fails', () => {
     const issues = { errors: [], warnings: [] };
     const actionObj = { enabled: true, actionType: '', action: '', data: {} };
-    validateActionPayload(0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
     assert.strictEqual(issues.errors.length, 1);
     assert.ok(issues.errors[0].message.includes('choose an action type'));
   });
@@ -73,19 +73,19 @@ describe('validateActionPayload', () => {
   test('disabled action with no actionType passes (skipped)', () => {
     const issues = { errors: [], warnings: [] };
     const actionObj = { enabled: false, actionType: '', action: '', data: {} };
-    validateActionPayload(0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', actionObj, issues, 0, ACTION_SCHEMAS);
     assert.strictEqual(issues.errors.length, 0);
   });
 
   test('undefined action passes (skipped)', () => {
     const issues = { errors: [], warnings: [] };
-    validateActionPayload(0, 'shortPress', undefined, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', undefined, issues, 0, ACTION_SCHEMAS);
     assert.strictEqual(issues.errors.length, 0);
   });
 
   test('null action passes (skipped)', () => {
     const issues = { errors: [], warnings: [] };
-    validateActionPayload(0, 'shortPress', null, issues, 0, ACTION_SCHEMAS);
+    validateActionPayload(1, 0, 'shortPress', null, issues, 0, ACTION_SCHEMAS);
     assert.strictEqual(issues.errors.length, 0);
   });
 });

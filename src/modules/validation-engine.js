@@ -79,6 +79,8 @@ export function validateConfig(config, deps = {}) {
   }
 
   const positions = new Map();
+  const cols = Number.isInteger(config.gridColumns) ? config.gridColumns : DEFAULT_CONFIG.gridColumns;
+  const slotOf = (btn) => btn && Number.isInteger(btn.row) && Number.isInteger(btn.col) ? btn.row * cols + btn.col + 1 : 0;
   config.buttons.forEach((btn, i) => {
     if (!btn || typeof btn !== 'object') {
       issues.errors.push({ message: `Button ${i + 1} is empty or invalid.` });
@@ -88,65 +90,65 @@ export function validateConfig(config, deps = {}) {
     if (btn.empty) return;
 
     if (!['stateless', 'checkable', 'timer_sync', 'number_sync'].includes(btn.type)) {
-      issues.errors.push({ message: `Button ${i + 1} has an unsupported button type.`, selector: i === selectedButtonIndex ? '.type-toggle' : null });
+      issues.errors.push({ message: `Button ${slotOf(btn)} has an unsupported button type.`, selector: i === selectedButtonIndex ? '.type-toggle' : null });
     }
 
     if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.icon || ''))) {
-      issues.errors.push({ message: `Button ${i + 1} icon must be a Material Design Icon codepoint like \\U000F0594.`, selector: i === selectedButtonIndex ? '#icon-picker-trigger' : null });
+      issues.errors.push({ message: `Button ${slotOf(btn)} icon must be a Material Design Icon codepoint like \\U000F0594.`, selector: i === selectedButtonIndex ? '#icon-picker-trigger' : null });
     }
 
     const maxCol = Number.isInteger(config.gridColumns) ? config.gridColumns - 1 : DEFAULT_CONFIG.gridColumns - 1;
     const maxRow = Number.isInteger(config.gridRows) ? config.gridRows - 1 : DEFAULT_CONFIG.gridRows - 1;
     if (!Number.isInteger(btn.col) || btn.col < 0 || btn.col > maxCol || !Number.isInteger(btn.row) || btn.row < 0 || btn.row > maxRow) {
-      issues.errors.push({ message: `Button ${i + 1} position must be inside the ${config.gridColumns || DEFAULT_CONFIG.gridColumns}x${config.gridRows || DEFAULT_CONFIG.gridRows} grid.`, selector: null });
+      issues.errors.push({ message: `Button ${slotOf(btn)} position must be inside the ${config.gridColumns || DEFAULT_CONFIG.gridColumns}x${config.gridRows || DEFAULT_CONFIG.gridRows} grid.`, selector: null });
     }
 
     const position = `${btn.col},${btn.row}`;
     if (positions.has(position)) {
-      issues.errors.push({ message: `Buttons ${positions.get(position) + 1} and ${i + 1} overlap at column ${btn.col + 1}, row ${btn.row + 1}. Move one button to an unused grid slot.`, selector: null });
+      issues.errors.push({ message: `Buttons ${slotOf(config.buttons[positions.get(position)])} and ${slotOf(btn)} overlap at column ${btn.col + 1}, row ${btn.row + 1}. Move one button to an unused grid slot.`, selector: null });
     } else {
       positions.set(position, i);
     }
 
     if (!/^[0-9A-Fa-f]{6}$/.test(String(btn.color || ''))) {
-      issues.errors.push({ message: `Button ${i + 1}: color must be exactly 6 hexadecimal characters, for example FFFFFF or FF9800.`, selector: i === selectedButtonIndex ? '#color-hex' : null });
+      issues.errors.push({ message: `Button ${slotOf(btn)}: color must be exactly 6 hexadecimal characters, for example FFFFFF or FF9800.`, selector: i === selectedButtonIndex ? '#color-hex' : null });
     }
 
     if (btn.type === 'stateless' && !btn.shortPress?.enabled && !btn.longPress?.enabled) {
-      issues.warnings.push({ message: `Button ${i + 1}: stateless buttons need at least one press action so the generated YAML has something to trigger.`, selector: i === selectedButtonIndex ? '#short-action-type' : null });
+      issues.warnings.push({ message: `Button ${slotOf(btn)}: stateless buttons need at least one press action so the generated YAML has something to trigger.`, selector: i === selectedButtonIndex ? '#short-action-type' : null });
     }
 
     // Both checkable, timer_sync and number_sync require HA entity
     const needsEntitySync = btn.type === 'checkable' || btn.type === 'timer_sync' || btn.type === 'number_sync';
     if (needsEntitySync && !String(btn.haEntity || '').trim()) {
-      issues.errors.push({ message: `Button ${i + 1}: ${btn.type} mode needs a Home Assistant entity such as switch.living_room or timer.studio_light.`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
+      issues.errors.push({ message: `Button ${slotOf(btn)}: ${btn.type} mode needs a Home Assistant entity such as switch.living_room or timer.studio_light.`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
     }
 
     // number_sync must use a sensor.* domain entity
     if (btn.type === 'number_sync' && String(btn.haEntity || '').trim() && !/^sensor\./.test(String(btn.haEntity))) {
-      issues.errors.push({ message: `Button ${i + 1}: number_sync mode requires a sensor.* entity like sensor.temperature; got "${btn.haEntity}".`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
+      issues.errors.push({ message: `Button ${slotOf(btn)}: number_sync mode requires a sensor.* entity like sensor.temperature; got "${btn.haEntity}".`, selector: i === selectedButtonIndex ? '#ha-entity' : null });
     }
 
     // number_sync requires threshold and valid on/off icons
     if (btn.type === 'number_sync') {
       if (btn.threshold === null || btn.threshold === '' || isNaN(Number(btn.threshold))) {
-        issues.errors.push({ message: `Button ${i + 1} number_sync mode requires a numeric threshold.`, selector: i === selectedButtonIndex ? '#number-threshold' : null });
+        issues.errors.push({ message: `Button ${slotOf(btn)} number_sync mode requires a numeric threshold.`, selector: i === selectedButtonIndex ? '#number-threshold' : null });
       }
       if (!['above', 'below'].includes(btn.condition)) {
-        issues.errors.push({ message: `Button ${i + 1} number_sync condition must be 'above' or 'below'.`, selector: i === selectedButtonIndex ? '#number-sync-condition-group' : null });
+        issues.errors.push({ message: `Button ${slotOf(btn)} number_sync condition must be 'above' or 'below'.`, selector: i === selectedButtonIndex ? '#number-sync-condition-group' : null });
       }
       if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOn || btn.icon || '')) || !/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOff || btn.icon || ''))) {
-        issues.errors.push({ message: `Button ${i + 1} number_sync mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
+        issues.errors.push({ message: `Button ${slotOf(btn)} number_sync mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
       }
     }
 
     // Only checkable buttons need onState and icon validation (timer_sync has its own state tracking)
     if (btn.type === 'checkable') {
       if (!String(btn.onState || '').trim()) {
-        issues.errors.push({ message: `Button ${i + 1} checkable mode requires an on-state value.`, selector: i === selectedButtonIndex ? '#on-state' : null });
+        issues.errors.push({ message: `Button ${slotOf(btn)} checkable mode requires an on-state value.`, selector: i === selectedButtonIndex ? '#on-state' : null });
       }
       if (!/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOn || btn.icon || '')) || !/^\\U000F[0-9A-Fa-f]{4}$/.test(String(btn.iconOff || btn.icon || ''))) {
-        issues.errors.push({ message: `Button ${i + 1} checkable mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
+        issues.errors.push({ message: `Button ${slotOf(btn)} checkable mode requires valid on/off icon codepoints.`, selector: i === selectedButtonIndex ? '#icon-on-trigger' : null });
       }
     }
 
@@ -154,7 +156,7 @@ export function validateConfig(config, deps = {}) {
       if (looksLikeSecret(btn[key], key)) {
         const path = `buttons.${i}.${key}`;
         issues.warnings.push({
-          message: `Button ${i + 1} ${key} looks like a credential. Use !secret ${secretNameFromContext(path)} instead.`,
+          message: `Button ${slotOf(btn)} ${key} looks like a credential. Use !secret ${secretNameFromContext(path)} instead.`,
           selector: i === selectedButtonIndex ? (key === 'label' ? '#btn-label' : key === 'haEntity' ? '#ha-entity' : key === 'timerDefaultLabel' ? '#timer-default-label' : '#on-state') : null,
           secretPath: path,
           secretRef: `!secret ${secretNameFromContext(path)}`
@@ -162,8 +164,8 @@ export function validateConfig(config, deps = {}) {
       }
     });
 
-    validateActionPayload(i, 'shortPress', btn.shortPress, issues, selectedButtonIndex, ACTION_SCHEMAS);
-    validateActionPayload(i, 'longPress', btn.longPress, issues, selectedButtonIndex, ACTION_SCHEMAS);
+    validateActionPayload(slotOf(btn), i, 'shortPress', btn.shortPress, issues, selectedButtonIndex, ACTION_SCHEMAS);
+    validateActionPayload(slotOf(btn), i, 'longPress', btn.longPress, issues, selectedButtonIndex, ACTION_SCHEMAS);
   });
 
   return issues;
@@ -171,20 +173,21 @@ export function validateConfig(config, deps = {}) {
 
 /**
  * Validate an action payload for a button press.
- * @param {number} buttonIndex - Zero-based button index
+ * @param {number} buttonNumber - Display button number (slot-based)
+ * @param {number} arrayIndex - Zero-based array index for selector matching
  * @param {string} pressType - 'shortPress' or 'longPress'
  * @param {object} actionObj - The action configuration object
  * @param {object} issues - The issues accumulator { errors: [], warnings: [] }
  * @param {number} selectedButtonIndex - Currently selected button index for selector mapping
  * @param {object} ACTION_SCHEMAS - Action schema definitions (for future extensibility)
  */
-export function validateActionPayload(buttonIndex, pressType, actionObj, issues, selectedButtonIndex, ACTION_SCHEMAS) {
+export function validateActionPayload(buttonNumber, arrayIndex, pressType, actionObj, issues, selectedButtonIndex, ACTION_SCHEMAS) {
   if (!actionObj?.enabled) return;
   const pressLabel = pressType === 'longPress' ? 'long press' : 'short press';
-  const actionTypeSelector = buttonIndex === selectedButtonIndex ? (pressType === 'longPress' ? '#long-action-type' : '#short-action-type') : null;
+  const actionTypeSelector = arrayIndex === selectedButtonIndex ? (pressType === 'longPress' ? '#long-action-type' : '#short-action-type') : null;
 
   if (!actionObj.actionType) {
-    issues.errors.push({ message: `Button ${buttonIndex + 1}: choose an action type for the enabled ${pressLabel}, or disable that ${pressLabel} action.`, selector: actionTypeSelector });
+    issues.errors.push({ message: `Button ${buttonNumber}: choose an action type for the enabled ${pressLabel}, or disable that ${pressLabel} action.`, selector: actionTypeSelector });
     return;
   }
 }
